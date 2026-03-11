@@ -123,19 +123,13 @@ footer p{
     color: #777;
 }
 
-/* Category filter buttons */
-.category-filter {
-    margin: 8px 0;
-}
-
-.category-filter .btn {
-    margin: 2px;
-}
-
-.category-filter .btn.active {
-    background-color: #2A6496;
-    border-color: #245580;
-    color: #fff;
+/* Query info display above editor */
+#query-info {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background-color: #f5f5f5;
+    border: 1px solid #e3e3e3;
+    border-radius: 4px;
 }
 
 /* Examples treeview node hover transition */
@@ -227,6 +221,28 @@ footer p{
     margin-bottom: 0;
 }
 
+.navbar-default > .container-fluid {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-default .navbar-header {
+    float: none;
+}
+
+.navbar-default .navbar-brand {
+    height: auto;
+    padding: 0 15px;
+}
+
+.navbar-default .navbar-collapse {
+    float: none;
+    flex: 1;
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+}
+
 .navbar-default .navbar-brand:hover,
 .navbar-default .navbar-brand:focus {
     background-color: transparent;
@@ -249,6 +265,8 @@ footer p{
 .navbar-form.navbar-right {
     padding-right: 0;
     margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 /* UM Brand: Button color overrides */

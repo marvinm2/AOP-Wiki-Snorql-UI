@@ -37,7 +37,7 @@
 	<nav class="navbar navbar-default">
       <div class="container-fluid" style="height: 80px">
         <div class="navbar-header">
-		  <a class="navbar-brand" id="index-page" href=""><img src="assets/images/AOP-Wiki RDF logo horizontal UM.png" height="55" style="margin-top: -12px;" /></a>
+		  <a class="navbar-brand" id="index-page" href=""><img src="assets/images/AOP-Wiki RDF logo horizontal UM.png" height="55" /></a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
 		  <ul class="nav navbar-nav">
@@ -66,6 +66,7 @@
 				
 				<div class="row">
 					<div class="col-md-12">
+						<div id="query-info" style="display: none;"></div>
 						<div id="param-panel" style="display: none;"></div>
 						<h4>SPARQL Query:</h4>
 						<textarea name="query" id="querytext" rows="9"></textarea>
@@ -87,9 +88,17 @@
 					<div class="col-md-12 buttons-holder">		
 						<input id="query-button" type="button" class="btn btn-danger" value="Query" />
 						<input id="reset-button" type="button" class="btn btn-success" value="Reset" />
-						<input id="export-csv" type="button" class="btn btn-warning" value="Export CSV" />
-						<input id="export-json" type="button" class="btn btn-primary" value="Export JSON" />
-						<input id="export-xml" type="button" class="btn btn-info" value="Export XML" />
+						<div class="btn-group">
+							<button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
+								Export <span class="caret"></span>
+							</button>
+							<ul class="dropdown-menu">
+								<li><a id="export-csv" href="#">CSV</a></li>
+								<li><a id="export-tsv" href="#">TSV</a></li>
+								<li><a id="export-json" href="#">JSON</a></li>
+								<li><a id="export-xml" href="#">XML</a></li>
+							</ul>
+						</div>
 						<input id="generate-permalink" type="button" class="btn btn-secondary" value="Get Permalink" />
 						<button id="copy-button" type="button" class="btn btn-default"><i class="glyphicon glyphicon-copy"></i> Copy</button>
 						<input id="enter-fullscreen" type="button" class="btn btn-dark" value="Fullscreen Mode" />
@@ -119,7 +128,6 @@
 						<button type="button" class="btn btn-danger" id="btn-search">Search</button>
 						<button type="button" class="btn btn-default" id="btn-clear-search">Clear</button>
 						<!-- </form> -->
-						<div id="category-filter" class="category-filter"></div>
 						<hr/>
 						<div class="list-group" id="examples"></div>
 				  </div>
@@ -217,7 +225,6 @@
 			<button type="button" class="btn btn-danger" id="btn-search-fs">Search</button>
 			<button type="button" class="btn btn-default" id="btn-clear-search-fs">Clear</button>
 			<!-- </form> -->
-			<div id="category-filter-fs" class="category-filter"></div>
 			<hr/>
 			<div class="list-group" id="examples-fs"></div> 
 		  </div>

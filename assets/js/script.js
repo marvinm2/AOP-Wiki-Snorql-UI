@@ -103,9 +103,6 @@ jQuery(document).ready(function() {
           if (typeof _fullTreeData !== 'undefined' && _fullTreeData) {
               initTreeview(JSON.parse(JSON.stringify(_fullTreeData)), '');
           }
-          // Reset category filter
-          $('#category-filter button').removeClass('active');
-          $('#category-filter button[data-category="all"]').addClass('active');
         });
 
         //---------------- Search funcionality ends ------------------------
@@ -127,9 +124,6 @@ jQuery(document).ready(function() {
           if (typeof _fullTreeData !== 'undefined' && _fullTreeData) {
               initTreeview(JSON.parse(JSON.stringify(_fullTreeData)), '-fs');
           }
-          // Reset category filter
-          $('#category-filter-fs button').removeClass('active');
-          $('#category-filter-fs button[data-category="all"]').addClass('active');
         });
 
         //---------------- Search funcionality Fullscreen ends ------------------------
@@ -151,21 +145,27 @@ jQuery(document).ready(function() {
             editor.getDoc().setValue("");
         });
 
-        jQuery("#export-csv").on("click",function(){
+        jQuery("#export-csv").on("click",function(e){
+            e.preventDefault();
             var query = editor.getDoc().getValue();
-            var queryText = getPrefixes() + query;
             exportResults(jQuery("#endpoint").val(), query, "csv");
         });
 
-        jQuery("#export-json").on("click",function(){
+        jQuery("#export-tsv").on("click",function(e){
+            e.preventDefault();
             var query = editor.getDoc().getValue();
-            var queryText = getPrefixes() + query;
+            exportResults(jQuery("#endpoint").val(), query, "tsv");
+        });
+
+        jQuery("#export-json").on("click",function(e){
+            e.preventDefault();
+            var query = editor.getDoc().getValue();
             exportResults(jQuery("#endpoint").val(), query, "json");
         });
 
-        jQuery("#export-xml").on("click",function(){
+        jQuery("#export-xml").on("click",function(e){
+            e.preventDefault();
             var query = editor.getDoc().getValue();
-            var queryText = getPrefixes() + query;
             exportResults(jQuery("#endpoint").val(), query, "xml");
         });
 

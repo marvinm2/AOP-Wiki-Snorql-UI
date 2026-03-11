@@ -85,6 +85,12 @@ function parseRqHeaders(content) {
             continue;
         }
 
+        // Continuation line: "#   some text" (indented, no keyword)
+        if (descriptionLines.length > 0 && line.match(/^#\s{2,}\S/)) {
+            descriptionLines.push(line.replace(/^#\s+/, ''));
+            continue;
+        }
+
         var catMatch = line.match(/^#\s*category:\s*(.+)/i);
         if (catMatch) {
             var cats = catMatch[1].split(',').map(function(c) { return c.trim(); });
@@ -387,66 +393,6 @@ function enrichTreeWithMetadata(tree) {
     });
 }
 
-function collectCategories(nodes, categorySet) {
-    if (!nodes) return;
-    nodes.forEach(function(node) {
-        if (node.categories && node.categories.length > 0) {
-            node.categories.forEach(function(c) { categorySet.add(c); });
-        }
-        if (node.nodes) {
-            collectCategories(node.nodes, categorySet);
-        }
-    });
-}
-
-function buildCategoryFilter(treeData, suffix) {
-    var categories = new Set();
-    collectCategories(treeData, categories);
-
-    if (categories.size === 0) return;
-
-    var $container = $('#category-filter' + suffix);
-    $container.empty();
-
-    var html = '<button class="btn btn-default btn-xs active" data-category="all">All</button>';
-    categories.forEach(function(cat) {
-        html += '<button class="btn btn-default btn-xs" data-category="' + cat + '">' + cat + '</button>';
-    });
-    $container.html(html);
-
-    $container.on('click', 'button', function() {
-        $container.find('button').removeClass('active');
-        $(this).addClass('active');
-
-        var selectedCategory = $(this).data('category');
-        if (selectedCategory === 'all') {
-            initTreeview(JSON.parse(JSON.stringify(_fullTreeData)), suffix);
-        } else {
-            var filtered = filterTreeByCategory(_fullTreeData, selectedCategory);
-            initTreeview(filtered, suffix);
-        }
-    });
-}
-
-function filterTreeByCategory(nodes, category) {
-    var result = [];
-    nodes.forEach(function(node) {
-        if (node.nodes) {
-            var filteredChildren = filterTreeByCategory(node.nodes, category);
-            if (filteredChildren.length > 0) {
-                var folderCopy = JSON.parse(JSON.stringify(node));
-                folderCopy.nodes = filteredChildren;
-                result.push(folderCopy);
-            }
-        } else {
-            if (node.categories && node.categories.indexOf(category) !== -1) {
-                result.push(JSON.parse(JSON.stringify(node)));
-            }
-        }
-    });
-    return result;
-}
-
 function filterTreeBySearch(nodes, lowerPattern) {
     var result = [];
     nodes.forEach(function(node) {
@@ -484,10 +430,6 @@ function searchExamples(pattern, suffix) {
     var filtered = filterTreeBySearch(_fullTreeData, lowerPattern);
 
     initTreeview(filtered, suffix);
-
-    // Reset category filter to "All" since search operates on full data
-    $('#category-filter' + suffix + ' button').removeClass('active');
-    $('#category-filter' + suffix + ' button[data-category="all"]').addClass('active');
 }
 
 function initTreeview(tree, suffix) {
@@ -505,6 +447,18 @@ function initTreeview(tree, suffix) {
                 };
                 var handleContent = function(content) {
                     var parsed = parseRqHeaders(content);
+
+                    // Show title and description
+                    var $info = $('#query-info');
+                    if (parsed.title || parsed.description) {
+                        var infoHtml = '';
+                        if (parsed.title) infoHtml += '<strong>' + parsed.title + '</strong>';
+                        if (parsed.description) infoHtml += '<span class="text-muted"> &mdash; ' + parsed.description + '</span>';
+                        $info.html(infoHtml).show();
+                    } else {
+                        $info.hide();
+                    }
+
                     if (parsed.params.length > 0) {
                         _currentTemplate = content;
                         _currentParams = parsed.params;
@@ -518,10 +472,11 @@ function initTreeview(tree, suffix) {
                         _currentTemplate = null;
                         _currentParams = null;
                         $('#param-panel').slideUp();
+                        var body = stripHeaders(content);
                         _paramIgnoreChange = true;
-                        editor.getDoc().setValue(content);
+                        editor.getDoc().setValue(body);
                         _paramIgnoreChange = false;
-                        updateUrl(content);
+                        updateUrl(body);
                     }
                 };
                 if (node.queryContent) {
@@ -574,7 +529,6 @@ function fetchExamples(suffix) {
     if (cached) {
         _fullTreeData = JSON.parse(JSON.stringify(cached));
         initTreeview(cached, suffix);
-        buildCategoryFilter(_fullTreeData, suffix);
         return;
     }
 
@@ -587,7 +541,6 @@ function fetchExamples(suffix) {
         setCachedExamples(repo, enrichedTree);
         _fullTreeData = JSON.parse(JSON.stringify(enrichedTree));
         initTreeview(enrichedTree, suffix);
-        buildCategoryFilter(_fullTreeData, suffix);
     }).fail(function(xhr) {
         var message = 'Could not load examples.';
         if (xhr.status === 403) {
