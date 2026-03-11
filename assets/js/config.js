@@ -1,6 +1,6 @@
 window.SNORQL_CONFIG = {
     endpoint: "https://aopwiki.rdf.bigcat-bioinformatics.org/sparql",
-    examplesRepo: "",
+    examplesRepo: "https://github.com/marvinm2/AOP-Wiki-Queries",
     defaultGraph: "",
     title: "AOP-Wiki RDF Explorer",
     poweredByLink: "https://aopwiki.org",

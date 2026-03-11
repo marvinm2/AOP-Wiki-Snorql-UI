@@ -271,7 +271,7 @@ function mainAjax(link, repo) {
                 if (segments.length == 1) {
                     node.text = segments[0];
                     node.originalFilename = segments[0];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/master/" + path;
+                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree.push(node);
 
@@ -289,7 +289,7 @@ function mainAjax(link, repo) {
 
                     node.text = segments[1];
                     node.originalFilename = segments[1];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/master/" + path;
+                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree[index].nodes.push(node);
 
@@ -318,7 +318,7 @@ function mainAjax(link, repo) {
 
                     node.text = segments[2];
                     node.originalFilename = segments[2];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/master/" + path;
+                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree[index].nodes[index2].nodes.push(node);
                 }
@@ -579,7 +579,7 @@ function fetchExamples(suffix) {
     }
 
     var repoPath = repo.substring(19);
-    var link = "https://api.github.com/repos/" + repoPath + "/git/trees/master?recursive=1";
+    var link = "https://api.github.com/repos/" + repoPath + "/git/trees/main?recursive=1";
 
     mainAjax(link, repoPath).then(function(tree) {
         return enrichTreeWithMetadata(tree);
@@ -1067,6 +1067,9 @@ function exportResults(url, sparql, type, output) {
     if(type === "csv"){
         service.setRequestHeader('Accept', 'application/sparql-results+json,*/*');
         service.setOutput('json');
+    }else if(type === "tsv"){
+        service.setRequestHeader('Accept', 'text/tab-separated-values,*/*');
+        service.setOutput('tsv');
     }else{
         service.setRequestHeader('Accept', 'application/sparql-results+'+type+',*/*');
         service.setOutput(type);
@@ -1089,10 +1092,17 @@ function renderOutput(results, type){
         download_link.setAttribute('download', "snorql-json-"+(new Date().getTime() / 1000)+".json");
         download_link.click();
 
+    }else if(type === 'tsv'){
+
+        var download_link = document.createElement('a');
+        download_link.setAttribute('href', 'data:text/tab-separated-values;charset=utf8,' + encodeURIComponent(results));
+        download_link.setAttribute('download', "snorql-tsv-"+(new Date().getTime() / 1000)+".tsv");
+        download_link.click();
+
     }else if(type === 'xml'){
 
         var download_link = document.createElement('a');
-        download_link.setAttribute('href', 'data:text/csv;charset=utf8,' + encodeURIComponent(results));
+        download_link.setAttribute('href', 'data:text/xml;charset=utf8,' + encodeURIComponent(results));
         download_link.setAttribute('download', "snorql-xml-"+(new Date().getTime() / 1000)+".xml");
         download_link.click();
     }
