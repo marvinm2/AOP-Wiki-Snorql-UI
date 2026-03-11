@@ -4,8 +4,18 @@
 }
 
 footer{
-    height: 50px;
-    background-color: #f5f5f5;
+    min-height: 50px;
+    background-color: #f0f0f0;
+    color: #002147;
+    padding: 8px 0;
+}
+
+footer a {
+    color: #2A6496;
+}
+
+footer a:hover {
+    color: #1e4d73;
 }
 
 footer p{
@@ -17,7 +27,7 @@ footer p{
 }
 
 #result{
-  margin-bottom: 50px;
+  margin-bottom: 60px;
 }
 
 .row{
@@ -70,15 +80,14 @@ footer p{
 }
 
 .btn-dark {
+    background-color: #343A40;
+    border-color: #2b3035;
     color: #fff;
-    background-color: #555;
-    border-color: #555;
 }
-
-.btn-dark:hover {
+.btn-dark:hover, .btn-dark:focus, .btn-dark:active {
+    background-color: #2b3035;
+    border-color: #22262a;
     color: #fff;
-    background-color: #aaa;
-    border-color: #666;
 }
 
 .container-fluid{
@@ -99,7 +108,7 @@ footer p{
     width: 32px;
     height: 32px;
     border: 3px solid #ddd;
-    border-top: 3px solid #5cb85c;
+    border-top: 3px solid #2A6496;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -123,8 +132,8 @@ footer p{
 }
 
 .category-filter .btn.active {
-    background-color: #5cb85c;
-    border-color: #4cae4c;
+    background-color: #2A6496;
+    border-color: #245580;
     color: #fff;
 }
 
@@ -189,7 +198,7 @@ footer p{
 }
 
 .dot-checking {
-    background-color: #999;
+    background-color: #2A6496;
     animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
@@ -208,4 +217,112 @@ footer p{
 @keyframes pulse-dot {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
+}
+
+/* UM Brand: Dark navbar */
+.navbar-inverse {
+    background-color: #002147;
+    border-color: #001a38;
+    margin-bottom: 0;
+}
+
+.navbar-inverse .navbar-brand:hover,
+.navbar-inverse .navbar-brand:focus {
+    background-color: transparent;
+}
+
+.navbar-inverse .input-group-addon {
+    background-color: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: rgba(255,255,255,0.2);
+}
+
+.navbar-inverse .form-control {
+    border-color: rgba(255,255,255,0.2);
+}
+
+/* UM Brand: Button color overrides */
+
+/* Query = UM blue */
+.btn-success {
+    background-color: #2A6496;
+    border-color: #245580;
+    color: #fff;
+}
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background-color: #235a87;
+    border-color: #1e4d73;
+    color: #fff;
+}
+
+/* Reset = UM orange */
+.btn-danger {
+    background-color: #E87722;
+    border-color: #d46b1e;
+    color: #fff;
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+    background-color: #d46b1e;
+    border-color: #c0601a;
+    color: #fff;
+}
+
+/* Export CSV = Light blue */
+.btn-warning {
+    background-color: #5B9BD5;
+    border-color: #4a8bc5;
+    color: #fff;
+}
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+    background-color: #4a8bc5;
+    border-color: #3a7bb5;
+    color: #fff;
+}
+
+/* Export JSON = Steel blue */
+.btn-primary {
+    background-color: #4472C4;
+    border-color: #3a65b3;
+    color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #3a65b3;
+    border-color: #3058a2;
+    color: #fff;
+}
+
+/* Export XML = Teal blue */
+.btn-info {
+    background-color: #2E75B6;
+    border-color: #2868a4;
+    color: #fff;
+}
+.btn-info:hover, .btn-info:focus, .btn-info:active {
+    background-color: #2868a4;
+    border-color: #225b92;
+    color: #fff;
+}
+
+/* Get Permalink = Gray */
+.btn-secondary {
+    background-color: #6C757D;
+    border-color: #60686f;
+    color: #fff;
+}
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
+    background-color: #60686f;
+    border-color: #545b62;
+    color: #fff;
+}
+
+/* Show Prefixes = Off-white */
+.btn-light {
+    background-color: #f8f9fa;
+    border-color: #ddd;
+    color: #333;
+}
+.btn-light:hover, .btn-light:focus, .btn-light:active {
+    background-color: #e9ecef;
+    border-color: #ccc;
+    color: #333;
 }
