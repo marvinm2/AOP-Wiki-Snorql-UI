@@ -34,11 +34,10 @@
 
   <body onload="start()">
  
-	<nav class="navbar navbar-inverse">
-      <!-- <div class="container-fluid"> -->
-      <div class="container" style="display: inline-block; height: 80px">
+	<nav class="navbar navbar-default">
+      <div class="container-fluid" style="height: 80px">
         <div class="navbar-header">
-		  <a class="navbar-brand" id="index-page" href=""><img src="assets/images/AOP-Wiki RDF logo horizontal UM white.png" height="45" style="margin-top: -8px;" /></a>
+		  <a class="navbar-brand" id="index-page" href=""><img src="assets/images/AOP-Wiki RDF logo horizontal UM.png" height="55" style="margin-top: -12px;" /></a>
         </div>
         <div id="navbar" class="navbar-collapse collapse">
 		  <ul class="nav navbar-nav">
@@ -46,7 +45,7 @@
           <form class="navbar-form navbar-right">
             <div class="input-group">
 				<span class="input-group-addon">SPARQL Endpoint</span>
-				<input size="50" class="form-control mr-sm-2" name="endpoint" id="endpoint"
+				<input size="40" class="form-control mr-sm-2" name="endpoint" id="endpoint"
 				       onchange="changeEndpoint();"
 				       onkeydown="if(event.key==='Enter'){event.preventDefault();changeEndpoint();}" />
 				<span class="input-group-addon" style="background: transparent; border: none; padding: 0 8px;">
@@ -86,8 +85,8 @@
 				
 				<div class="row">
 					<div class="col-md-12 buttons-holder">		
-						<input id="query-button" type="button" class="btn btn-success" value="Query" />
-						<input id="reset-button" type="button" class="btn btn-danger" value="Reset" />
+						<input id="query-button" type="button" class="btn btn-danger" value="Query" />
+						<input id="reset-button" type="button" class="btn btn-success" value="Reset" />
 						<input id="export-csv" type="button" class="btn btn-warning" value="Export CSV" />
 						<input id="export-json" type="button" class="btn btn-primary" value="Export JSON" />
 						<input id="export-xml" type="button" class="btn btn-info" value="Export XML" />
@@ -117,7 +116,7 @@
 						  <label for="input-search" class="sr-only">Search Tree:</label>
 						  <input type="text" class="form-control" id="input-search" placeholder="Search by title, description, or category..." value="">
 						</div>
-						<button type="button" class="btn btn-success" id="btn-search">Search</button>
+						<button type="button" class="btn btn-danger" id="btn-search">Search</button>
 						<button type="button" class="btn btn-default" id="btn-clear-search">Clear</button>
 						<!-- </form> -->
 						<div id="category-filter" class="category-filter"></div>
@@ -213,7 +212,7 @@
 			  <label for="input-search" class="sr-only">Search Tree:</label>
 			  <input type="text" class="form-control" id="input-search-fs" placeholder="Search by title, description, or category..." value="">
 			</div>
-			<button type="button" class="btn btn-success" id="btn-search-fs">Search</button>
+			<button type="button" class="btn btn-danger" id="btn-search-fs">Search</button>
 			<button type="button" class="btn btn-default" id="btn-clear-search-fs">Clear</button>
 			<!-- </form> -->
 			<div id="category-filter-fs" class="category-filter"></div>

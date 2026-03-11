@@ -8,6 +8,7 @@ footer{
     background-color: #f0f0f0;
     color: #002147;
     padding: 8px 0;
+    text-align: center;
 }
 
 footer a {
@@ -219,26 +220,35 @@ footer p{
     50% { opacity: 0.3; }
 }
 
-/* UM Brand: Dark navbar */
-.navbar-inverse {
+/* UM Brand: Navbar */
+.navbar-default {
     background-color: #002147;
     border-color: #001a38;
     margin-bottom: 0;
 }
 
-.navbar-inverse .navbar-brand:hover,
-.navbar-inverse .navbar-brand:focus {
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus {
     background-color: transparent;
 }
 
-.navbar-inverse .input-group-addon {
+.navbar-default .navbar-nav > li > a {
+    color: #fff;
+}
+
+.navbar-default .input-group-addon {
     background-color: rgba(255,255,255,0.1);
     color: #fff;
     border-color: rgba(255,255,255,0.2);
 }
 
-.navbar-inverse .form-control {
+.navbar-default .form-control {
     border-color: rgba(255,255,255,0.2);
+}
+
+.navbar-form.navbar-right {
+    padding-right: 0;
+    margin-right: 0;
 }
 
 /* UM Brand: Button color overrides */
