@@ -490,3 +490,15 @@ Edit the script's CONFIGURATION section to set defaults for your deployment, the
 - **Turtle validation:** Install `raptor2-utils` (`sudo apt-get install raptor2-utils`) for syntax validation
 - **Federated queries:** The template includes grants for SPARQL federation (SERVICE keyword)
 - **Namespace prefixes:** Add prefixes to the `namespaces` object in `assets/js/config.js` so URIs display as compact QNames in the UI
+
+## Maintainers
+
+- **Lead maintainer:** Marvin Martens — Department of Translational Genomics, Maastricht University — [ORCID 0000-0003-2230-0840](https://orcid.org/0000-0003-2230-0840)
+- **Backup maintainer:** Egon Willighagen — Department of Translational Genomics, Maastricht University — [ORCID 0000-0001-7542-0286](https://orcid.org/0000-0001-7542-0286)
+
+For questions, bug reports, and feature requests please open a [GitHub Issue](https://github.com/marvinm2/AOP-Wiki-Snorql-UI/issues).
+
+## License
+
+- **This UI codebase**: GNU General Public License v3.0 (GPL-3.0) — see [`LICENSE`](LICENSE). The codebase derives from the [WikiPathways Snorql-UI](https://github.com/wikipathways/Snorql-UI), which descends from the original [SNORQL](https://github.com/kurtjx/SNORQL) concept.
+- **Served AOP-Wiki RDF dataset**: Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA 4.0) — see the [AOPWikiRDF data licence](https://github.com/marvinm2/AOPWikiRDF/blob/master/data/LICENSE-DATA). Matches the upstream [AOP-Wiki](https://aopwiki.org/) content licence.
