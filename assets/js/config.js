@@ -91,10 +91,10 @@ window.SNORQL_CONFIG = {
         aop: {
             sparql: 'PREFIX aopo: <http://aopkb.org/aop_ontology#>\n' +
                 'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
-                'PREFIX dcterms: <http://purl.org/dc/terms/>\n' +
-                'SELECT DISTINCT (str(?aopId) as ?id) (str(?title) as ?name)\n' +
-                'WHERE { ?aop a aopo:AdverseOutcomePathway ; dcterms:identifier ?aopId ; dc:title ?title . }\n' +
-                'ORDER BY ?aopId',
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT DISTINCT (REPLACE(STR(?aop), "^.*/aop/", "") AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?aop a aopo:AdverseOutcomePathway ; dc:title ?title . }\n' +
+                'ORDER BY xsd:integer(?id)',
             valueField: 'id',
             labelField: 'name',
             placeholder: 'Type AOP ID or title...'
@@ -102,10 +102,10 @@ window.SNORQL_CONFIG = {
         keyEvent: {
             sparql: 'PREFIX aopo: <http://aopkb.org/aop_ontology#>\n' +
                 'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
-                'PREFIX dcterms: <http://purl.org/dc/terms/>\n' +
-                'SELECT DISTINCT (str(?keId) as ?id) (str(?title) as ?name)\n' +
-                'WHERE { ?ke a aopo:KeyEvent ; dcterms:identifier ?keId ; dc:title ?title . }\n' +
-                'ORDER BY ?keId',
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT DISTINCT (REPLACE(STR(?ke), "^.*/aop.events/", "") AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?ke a aopo:KeyEvent ; dc:title ?title . }\n' +
+                'ORDER BY xsd:integer(?id)',
             valueField: 'id',
             labelField: 'name',
             placeholder: 'Type Key Event ID or title...'
