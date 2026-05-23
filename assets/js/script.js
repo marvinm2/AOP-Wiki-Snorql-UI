@@ -19,31 +19,6 @@ function copyToClipboard(text) {
 
 jQuery(document).ready(function() {
 
-        var cookieDecision = getCookie('cookieDecision');
-
-        if (cookieDecision == "" || cookieDecision == "reject") {
-
-            $('#cookieModal').modal();
-
-            $('#cookieModal button.btn-secondary').on('click', function (e) {
-                setCookie("cookieDecision", "reject");
-		var pathQueryIndex = window.location.href.indexOf("?")
-		var path = window.location.href
-		
-		if(pathQueryIndex != -1){
-		  var newPath = window.location.href.substring(0,pathQueryIndex)
-		  window.location.href = newPath.endsWith("/") ? newPath.slice(0,-1) +"/cookies.html" : newPath +"/cookies.html";
-		}else{
-		  window.location.href = path.endsWith("/") ? path.slice(0,-1) +"/cookies.html" : path +"/cookies.html";	
-		}
-            });
-
-            $("#cookieModal button.btn-primary").on('click', function(){
-                setCookie("cookieDecision", "accept");
-                $('#cookieModal').modal('hide');
-            });
-        }
-
         jQuery("#query-button").on("click",function(event){
             event.preventDefault();
 
@@ -65,19 +40,6 @@ jQuery(document).ready(function() {
 		});
 
         //---------------- Populate query from URL (if available) -----------------------
-
-        function findGetParameter(parameterName) {
-            var result = null,
-                tmp = [];
-            location.search
-                .substr(1)
-                .split("&")
-                .forEach(function (item) {
-                  tmp = item.split("=");
-                  if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
-                });
-            return result;
-        }
 
         var query = findGetParameter("q");
         if(query != null){
@@ -141,8 +103,18 @@ jQuery(document).ready(function() {
             });
         });
 
-		jQuery("#reset-button").on("click",function(){
+		jQuery("#reset-button").on("click", function() {
+            // Clear template state
+            _paramMode = false;
+            _currentTemplate = null;
+            _currentParams = null;
+            _currentParsedTitle = null;
+            // Clear editor (wrapped in ignore flag to prevent dim trigger)
+            _paramIgnoreChange = true;
             editor.getDoc().setValue("");
+            _paramIgnoreChange = false;
+            // Show welcome panel (per D-09, D-19)
+            showWelcomePanel();
         });
 
         jQuery("#export-csv").on("click",function(e){
