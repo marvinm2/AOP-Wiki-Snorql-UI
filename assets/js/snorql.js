@@ -4,33 +4,48 @@ var _paramMode = false;
 var _paramIgnoreChange = false;
 var _currentTemplate = null;
 var _currentParams = null;
+var _currentParsedTitle = null; // Raw Mustache title template from #title header
+var _panelState = 'welcome'; // 'welcome' | 'active' | 'stale'
 
-function setCookie(cname, cvalue){
-    var d = new Date();
-    d.setTime(d.getTime() + (365*24*60*60*1000));
-    var expires = "expires="+ d.toUTCString();
-    document.cookie = cname + "=" + cvalue+ ";" + expires + ";path=/";
+function showWelcomePanel() {
+    _panelState = 'welcome';
+    $('#desc-title').text(CONFIG.welcomeTitle || 'SPARQL Query Explorer');
+    $('#desc-text').html(CONFIG.welcomeMessage || '<p>Browse and run SPARQL queries.</p>');
+    $('.stale-indicator').hide();
+    $('#desc-params').hide();
+    $('#desc-param-divider').hide();
+    $('#description-panel').removeClass('panel-stale').css('opacity', 1);
 }
 
-function getCookie(cname) {
-    var name = cname + "=";
-    var ca = document.cookie.split(';');
-    for(var i = 0; i < ca.length; i++) {
-        var c = ca[i];
-        while (c.charAt(0) == ' ') {
-            c = c.substring(1);
+function showQueryPanel(parsed) {
+    _panelState = 'active';
+    if (parsed.title && _currentParams && _currentParams.length > 0) {
+        // Render title with default param values (D-01, D-02)
+        var titleView = {};
+        for (var i = 0; i < _currentParams.length; i++) {
+            titleView[_currentParams[i].name] = _currentParams[i].defaultValue || '';
         }
-        if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
+        $('#desc-title').text(Mustache.render(parsed.title, titleView));
+    } else {
+        $('#desc-title').text(parsed.title || 'Query');
     }
-    return "";
+    $('#desc-text').text(parsed.description || '');
+    $('.stale-indicator').hide();
+    $('#description-panel').removeClass('panel-stale').css('opacity', 1);
+    // Enable param inputs if any exist
+    $('#desc-params .param-input').prop('disabled', false);
 }
 
-function clearLegacyCookies() {
-    document.cookie = "endpoint=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "examplesrepo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+function dimPanel() {
+    if (_panelState !== 'active') return; // Only dim from active state
+    _panelState = 'stale';
+    $('#description-panel').addClass('panel-stale');
+    $('.stale-indicator').show();
+    // Disable param inputs per D-17
+    $('#desc-params .param-input').prop('disabled', true);
 }
+var _autocompleteCache = {};
+var _autocompleteCachePromise = {};
 
 function findGetParameter(parameterName) {
     var result = null,
@@ -46,11 +61,13 @@ function findGetParameter(parameterName) {
 }
 
 function changeEndpoint() {
+    _autocompleteCache = {};
+    _autocompleteCachePromise = {};
     checkEndpointHealth();
 }
 
 function changeExamplesRepo() {
-    // Removed: no longer persists to cookie
+
     // Changes are temporary (session only)
 }
 
@@ -65,7 +82,7 @@ function getPrefixes(){
 }
 
 function parseRqHeaders(content) {
-    var result = { title: null, description: null, categories: [], params: [] };
+    var result = { title: null, description: null, params: [] };
 
     var lines = content.split('\n');
     var descriptionLines = [];
@@ -91,13 +108,6 @@ function parseRqHeaders(content) {
             continue;
         }
 
-        var catMatch = line.match(/^#\s*category:\s*(.+)/i);
-        if (catMatch) {
-            var cats = catMatch[1].split(',').map(function(c) { return c.trim(); });
-            result.categories = result.categories.concat(cats);
-            continue;
-        }
-
         var paramMatch = line.match(/^#\s*param:\s*(.+)/i);
         if (paramMatch) {
             var parts = paramMatch[1].split('|');
@@ -107,15 +117,27 @@ function parseRqHeaders(content) {
                 var paramDefault = parts[2].trim();
                 var paramLabel = parts[3].trim();
                 var paramOptions = null;
+                var autocompleteTypeName = null;
 
-                if (paramType.indexOf('enum:') === 0) {
-                    paramOptions = paramType.substring(5).split(',').map(function(o) { return o.trim(); });
+                if (paramType.indexOf('autocomplete:') === 0) {
+                    autocompleteTypeName = paramType.substring(13).trim();
+                    paramType = 'autocomplete';
+                } else if (paramType.indexOf('enum:') === 0) {
+                    var rawOptions = paramType.substring(5).split(',').map(function(o) { return o.trim(); });
+                    paramOptions = rawOptions.map(function(o) {
+                        var eqIdx = o.indexOf('=');
+                        if (eqIdx > 0) {
+                            return { value: o.substring(0, eqIdx), label: o.substring(eqIdx + 1) };
+                        }
+                        return { value: o, label: o };
+                    });
                     paramType = 'enum';
                 }
 
                 result.params.push({
                     name: paramName,
                     type: paramType,
+                    autocompleteType: autocompleteTypeName,
                     defaultValue: paramDefault,
                     label: paramLabel,
                     options: paramOptions
@@ -151,9 +173,16 @@ function sanitizeSparqlUri(value) {
     return value;
 }
 
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 function sanitizeEnumValue(value, allowedOptions) {
-    if (allowedOptions && allowedOptions.indexOf(value) !== -1) {
-        return value;
+    if (!allowedOptions) return null;
+    for (var i = 0; i < allowedOptions.length; i++) {
+        if (allowedOptions[i].value === value) return value;
     }
     return null;
 }
@@ -199,24 +228,240 @@ function stripHeaders(content) {
     return lines.slice(startIndex).join('\n');
 }
 
+function fetchAutocompleteData(typeName) {
+    if (_autocompleteCache[typeName]) {
+        return $.Deferred().resolve(_autocompleteCache[typeName]).promise();
+    }
+    if (_autocompleteCachePromise[typeName]) {
+        return _autocompleteCachePromise[typeName];
+    }
+
+    var typeConfig = CONFIG.autocompleteTypes ? CONFIG.autocompleteTypes[typeName] : null;
+    if (!typeConfig) {
+        console.warn('Autocomplete type "' + typeName + '" not found in registry');
+        return $.Deferred().resolve([]).promise();
+    }
+
+    // Static values - no SPARQL needed
+    if (typeConfig.staticValues) {
+        var list = typeConfig.staticValues.map(function(v) {
+            var item = {};
+            item[typeConfig.valueField] = v;
+            return item;
+        });
+        _autocompleteCache[typeName] = list;
+        return $.Deferred().resolve(list).promise();
+    }
+
+    // SPARQL fetch
+    var endpoint = document.getElementById('endpoint').value.trim();
+    var url = endpoint + '?query=' + encodeURIComponent(typeConfig.sparql) + '&output=json';
+
+    var deferred = $.Deferred();
+    $.ajax({ url: url, dataType: 'json' }).done(function(json) {
+        var list = [];
+        if (json && json.results && json.results.bindings) {
+            for (var i = 0; i < json.results.bindings.length; i++) {
+                var b = json.results.bindings[i];
+                var item = {};
+                item[typeConfig.valueField] = b[typeConfig.valueField] ? b[typeConfig.valueField].value : '';
+                if (typeConfig.labelField && b[typeConfig.labelField]) {
+                    item[typeConfig.labelField] = b[typeConfig.labelField].value;
+                }
+                if (typeConfig.extraField && b[typeConfig.extraField]) {
+                    item[typeConfig.extraField] = b[typeConfig.extraField].value;
+                }
+                list.push(item);
+            }
+        }
+        _autocompleteCache[typeName] = list;
+        _autocompleteCachePromise[typeName] = null;
+        deferred.resolve(list);
+    }).fail(function() {
+        _autocompleteCachePromise[typeName] = null;
+        deferred.resolve([]);
+    });
+
+    _autocompleteCachePromise[typeName] = deferred.promise();
+    return _autocompleteCachePromise[typeName];
+}
+
+function formatAutocompleteOption(item, typeConfig) {
+    var value = item[typeConfig.valueField] || '';
+    // Multi-field display (e.g., pathway: id + name + species)
+    if (typeConfig.labelField && item[typeConfig.labelField]) {
+        var label = item[typeConfig.labelField];
+        var extra = (typeConfig.extraField && item[typeConfig.extraField])
+            ? ' <span class="autocomplete-option-species">[' + escapeHtml(item[typeConfig.extraField]) + ']</span>'
+            : '';
+        return '<div class="autocomplete-option" data-value="' + escapeHtml(value) + '">' +
+            '<span class="autocomplete-option-id">' + escapeHtml(value) + '</span> ' +
+            '<span class="autocomplete-option-title">' + escapeHtml(label) + '</span>' +
+            extra +
+            '</div>';
+    }
+    // Single-field display (e.g., species, entityType, datasource)
+    return '<div class="autocomplete-option" data-value="' + escapeHtml(value) + '">' +
+        escapeHtml(value) +
+        '</div>';
+}
+
+function initAutocompleteField(inputId, typeName) {
+    var typeConfig = CONFIG.autocompleteTypes ? CONFIG.autocompleteTypes[typeName] : null;
+    if (!typeConfig) {
+        console.warn('Autocomplete type "' + typeName + '" not found in registry');
+        return;
+    }
+    initAutocomplete(inputId, function(val, render) {
+        fetchAutocompleteData(typeName).done(function(list) {
+            var filtered = [];
+            var lowerVal = val.toLowerCase();
+            for (var i = 0; i < list.length; i++) {
+                var item = list[i];
+                // Search across all configured fields
+                var match = false;
+                if (item[typeConfig.valueField] && item[typeConfig.valueField].toLowerCase().indexOf(lowerVal) !== -1) match = true;
+                if (!match && typeConfig.labelField && item[typeConfig.labelField] && item[typeConfig.labelField].toLowerCase().indexOf(lowerVal) !== -1) match = true;
+                if (match) filtered.push(item);
+            }
+            render(filtered);
+        });
+    }, function(item) {
+        return formatAutocompleteOption(item, typeConfig);
+    });
+    // Pre-fetch data so it is cached when user first types
+    fetchAutocompleteData(typeName);
+}
+
+function initAutocomplete(inputId, fetchFn, formatFn) {
+    var $input = $('#' + inputId);
+    var $wrapper = $input.closest('.autocomplete-wrapper');
+    var $dropdown = $wrapper.find('.autocomplete-dropdown');
+    var highlightIndex = -1;
+
+    function renderDropdown(items) {
+        if (items.length === 0) {
+            $dropdown.hide();
+            return;
+        }
+        var html = '';
+        var limit = Math.min(items.length, 50);
+        for (var i = 0; i < limit; i++) {
+            html += formatFn(items[i]);
+        }
+        if (items.length > 50) {
+            html += '<div class="autocomplete-option-more">' + (items.length - 50) + ' more — keep typing to narrow</div>';
+        }
+        $dropdown.html(html).show();
+        highlightIndex = -1;
+    }
+
+    function updateHighlight() {
+        $dropdown.find('.autocomplete-option').removeClass('highlighted');
+        if (highlightIndex >= 0) {
+            var $opts = $dropdown.find('.autocomplete-option');
+            if (highlightIndex < $opts.length) {
+                $opts.eq(highlightIndex).addClass('highlighted');
+                var opt = $opts[highlightIndex];
+                if (opt.scrollIntoView) {
+                    opt.scrollIntoView({ block: 'nearest' });
+                }
+            }
+        }
+    }
+
+    function selectItem(value) {
+        $input.val(value);
+        $dropdown.hide();
+        highlightIndex = -1;
+        $input.trigger('change');
+    }
+
+    $input.on('focus', function() {
+        this.select();
+    });
+
+    $input.on('input', function() {
+        var val = $input.val().trim().toLowerCase();
+        if (!val) {
+            $dropdown.hide();
+            return;
+        }
+        fetchFn(val, renderDropdown);
+    });
+
+    $input.on('keydown', function(e) {
+        if (!$dropdown.is(':visible')) return;
+        var $opts = $dropdown.find('.autocomplete-option');
+        if (e.keyCode === 40) { // Down
+            e.preventDefault();
+            highlightIndex = Math.min(highlightIndex + 1, $opts.length - 1);
+            updateHighlight();
+        } else if (e.keyCode === 38) { // Up
+            e.preventDefault();
+            highlightIndex = Math.max(highlightIndex - 1, 0);
+            updateHighlight();
+        } else if (e.keyCode === 13) { // Enter
+            e.preventDefault();
+            if (highlightIndex >= 0 && highlightIndex < $opts.length) {
+                selectItem($opts.eq(highlightIndex).attr('data-value'));
+            }
+        } else if (e.keyCode === 27) { // Escape
+            $dropdown.hide();
+            highlightIndex = -1;
+        }
+    });
+
+    $dropdown.on('click', '.autocomplete-option', function() {
+        selectItem($(this).attr('data-value'));
+    });
+
+    // Use namespaced event to avoid accumulating handlers across rebuilds
+    var ns = '.ac-' + inputId;
+    $(document).off('mousedown' + ns).on('mousedown' + ns, function(e) {
+        if (!$(e.target).closest('.autocomplete-wrapper').length) {
+            $dropdown.hide();
+            highlightIndex = -1;
+        }
+    });
+}
+
+// Legacy name-to-type map for .rq files not yet migrated to autocomplete: syntax
+var _legacyAutocompleteNames = {
+    'pathwayId': 'pathway',
+    'species': 'species'
+};
+
+function resolveAutocompleteType(param) {
+    if (param.autocompleteType) return param.autocompleteType;
+    return _legacyAutocompleteNames[param.name] || null;
+}
+
 function buildParamPanel(params, templateContent) {
-    var $panel = $('#param-panel');
-    var html = '<div class="panel panel-info">';
-    html += '<div class="panel-heading"><strong>Query Parameters</strong></div>';
-    html += '<div class="panel-body">';
+    var $panel = $('#desc-params');
+    var html = '<div class="param-row">';
 
     for (var i = 0; i < params.length; i++) {
         var p = params[i];
-        html += '<div class="form-group">';
-        html += '<label for="param-' + p.name + '">' + p.label + '</label>';
+        var acType = resolveAutocompleteType(p);
+        html += '<div class="param-item">';
+        html += '<label for="param-' + p.name + '">' + p.label + '</label> ';
 
         if (p.type === 'enum' && p.options) {
             html += '<select class="form-control param-input" id="param-' + p.name + '" data-param="' + p.name + '">';
             for (var j = 0; j < p.options.length; j++) {
-                var selected = (p.options[j] === p.defaultValue) ? ' selected' : '';
-                html += '<option value="' + p.options[j] + '"' + selected + '>' + p.options[j] + '</option>';
+                var opt = p.options[j];
+                var selected = (opt.value === p.defaultValue) ? ' selected' : '';
+                html += '<option value="' + opt.value + '"' + selected + '>' + escapeHtml(opt.label) + '</option>';
             }
             html += '</select>';
+        } else if (acType) {
+            var typeConfig = CONFIG.autocompleteTypes ? CONFIG.autocompleteTypes[acType] : null;
+            var placeholder = typeConfig ? typeConfig.placeholder : p.label;
+            html += '<div class="autocomplete-wrapper">';
+            html += '<input type="text" class="form-control param-input" id="param-' + p.name + '" data-param="' + p.name + '" value="' + escapeHtml(p.defaultValue) + '" placeholder="' + escapeHtml(placeholder) + '" autocomplete="off">';
+            html += '<div class="autocomplete-dropdown"></div>';
+            html += '</div>';
         } else {
             html += '<input type="text" class="form-control param-input" id="param-' + p.name + '" data-param="' + p.name + '" value="' + p.defaultValue + '" placeholder="' + p.label + '">';
         }
@@ -224,8 +469,16 @@ function buildParamPanel(params, templateContent) {
         html += '</div>';
     }
 
-    html += '</div></div>';
-    $panel.html(html).show();
+    html += '</div>';
+    $panel.html(html);
+
+    // Initialize autocomplete fields by type or legacy name fallback
+    for (var k = 0; k < params.length; k++) {
+        var acTypeName = resolveAutocompleteType(params[k]);
+        if (acTypeName) {
+            initAutocompleteField('param-' + params[k].name, acTypeName);
+        }
+    }
 
     // Trigger initial substitution with defaults
     var substituted = substituteParams(templateContent, params);
@@ -277,7 +530,9 @@ function mainAjax(link, repo) {
                 if (segments.length == 1) {
                     node.text = segments[0];
                     node.originalFilename = segments[0];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
+                    node.href = repo.includes("http://localhost")
+                        ? repo.replace("/api/repos/", "/raw/") + "/" + path
+                        : "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree.push(node);
 
@@ -295,7 +550,9 @@ function mainAjax(link, repo) {
 
                     node.text = segments[1];
                     node.originalFilename = segments[1];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
+                    node.href = repo.includes("http://localhost")
+                        ? repo.replace("/api/repos/", "/raw/") + "/" + path
+                        : "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree[index].nodes.push(node);
 
@@ -324,7 +581,9 @@ function mainAjax(link, repo) {
 
                     node.text = segments[2];
                     node.originalFilename = segments[2];
-                    node.href = "https://raw.githubusercontent.com/" + repo + "/main/" + path;
+                    node.href = repo.includes("http://localhost")
+                        ? repo.replace("/api/repos/", "/raw/") + "/" + path
+                        : "https://raw.githubusercontent.com/" + repo + "/main/" + path;
                     node.icon = 'glyphicon glyphicon-file';
                     tree[index].nodes[index2].nodes.push(node);
                 }
@@ -350,7 +609,7 @@ function getIndexFromTree(segment, nodes) {
 
 function collectLeafNodes(nodes, leaves) {
     for (var i = 0; i < nodes.length; i++) {
-        if (nodes[i].href && nodes[i].href.indexOf("raw.githubusercontent.com") !== -1) {
+        if (nodes[i].href && (nodes[i].href.indexOf("raw.githubusercontent.com") !== -1 || nodes[i].href.indexOf("/raw/") !== -1)) {
             leaves.push(nodes[i]);
         }
         if (nodes[i].nodes) {
@@ -375,14 +634,12 @@ function enrichTreeWithMetadata(tree) {
             var meta = parseRqHeaders(content);
             node.text = meta.title || cleanFilename(node.originalFilename || node.text);
             node.description = meta.description || '';
-            node.categories = meta.categories || [];
             node.queryContent = content;
             return node;
         }, function() {
             // If individual file fetch fails, use cleaned filename
             node.text = cleanFilename(node.originalFilename || node.text);
             node.description = '';
-            node.categories = [];
             node.queryContent = null;
             return node;
         });
@@ -407,14 +664,6 @@ function filterTreeBySearch(nodes, lowerPattern) {
             var matches = false;
             if (node.text && node.text.toLowerCase().indexOf(lowerPattern) !== -1) matches = true;
             if (!matches && node.description && node.description.toLowerCase().indexOf(lowerPattern) !== -1) matches = true;
-            if (!matches && node.categories) {
-                for (var i = 0; i < node.categories.length; i++) {
-                    if (node.categories[i].toLowerCase().indexOf(lowerPattern) !== -1) {
-                        matches = true;
-                        break;
-                    }
-                }
-            }
             if (matches) {
                 result.push(JSON.parse(JSON.stringify(node)));
             }
@@ -439,7 +688,7 @@ function initTreeview(tree, suffix) {
         expandIcon: 'glyphicon glyphicon-folder-close',
         collapseIcon: 'glyphicon glyphicon-folder-open',
         onNodeSelected: function(event, node) {
-            if (node.href && node.href.indexOf("raw.githubusercontent.com") !== -1) {
+            if (node.href && (node.href.indexOf("raw.githubusercontent.com") !== -1 || node.href.indexOf("/raw/") !== -1)) {
                 var updateUrl = function(content) {
                     var queryEncoded = "?q=" + encodeURIComponent(content) + "&endpoint=" + encodeURIComponent(jQuery("#endpoint").val().trim());
                     var url = window.location.href.split('?')[0] + queryEncoded;
@@ -448,30 +697,33 @@ function initTreeview(tree, suffix) {
                 var handleContent = function(content) {
                     var parsed = parseRqHeaders(content);
 
-                    // Show title and description
-                    var $info = $('#query-info');
-                    if (parsed.title || parsed.description) {
-                        var infoHtml = '';
-                        if (parsed.title) infoHtml += '<strong>' + parsed.title + '</strong>';
-                        if (parsed.description) infoHtml += '<span class="text-muted"> &mdash; ' + parsed.description + '</span>';
-                        $info.html(infoHtml).show();
-                    } else {
-                        $info.hide();
-                    }
-
+                    // Set template state BEFORE showQueryPanel so title can render with defaults
                     if (parsed.params.length > 0) {
                         _currentTemplate = content;
                         _currentParams = parsed.params;
+                        _currentParsedTitle = parsed.title; // Cache raw title for re-rendering
+                    } else {
+                        _currentTemplate = null;
+                        _currentParams = null;
+                        _currentParsedTitle = null;
+                    }
+
+                    showQueryPanel(parsed);
+
+                    if (parsed.params.length > 0) {
                         _paramMode = true;
                         buildParamPanel(parsed.params, content);
+                        // Show param section
+                        $('#desc-param-divider').show();
+                        $('#desc-params').show();
                         var substituted = substituteParams(content, parsed.params);
                         var body = stripHeaders(substituted);
                         updateUrl(body);
                     } else {
                         _paramMode = false;
-                        _currentTemplate = null;
-                        _currentParams = null;
-                        $('#param-panel').slideUp();
+                        // Hide param section
+                        $('#desc-param-divider').hide();
+                        $('#desc-params').hide();
                         var body = stripHeaders(content);
                         _paramIgnoreChange = true;
                         editor.getDoc().setValue(body);
@@ -520,7 +772,7 @@ function fetchExamples(suffix) {
         repo = repo.substring(0, repo.length - 1);
     }
 
-    if (!repo || !repo.includes("https://github.com")) {
+    if (!repo || (!repo.includes("https://github.com") && !repo.includes("http://localhost"))) {
         return;
     }
 
@@ -533,9 +785,11 @@ function fetchExamples(suffix) {
     }
 
     var repoPath = repo.substring(19);
-    var link = "https://api.github.com/repos/" + repoPath + "/git/trees/main?recursive=1";
+    var link = repo.includes("http://localhost")
+        ? repo + "/git/trees/main?recursive=1"
+        : "https://api.github.com/repos/" + repoPath + "/git/trees/main?recursive=1";
 
-    mainAjax(link, repoPath).then(function(tree) {
+    mainAjax(link, repo.includes("http://localhost") ? repo : repoPath).then(function(tree) {
         return enrichTreeWithMetadata(tree);
     }).then(function(enrichedTree) {
         setCachedExamples(repo, enrichedTree);
@@ -606,9 +860,6 @@ function checkEndpointHealth() {
 }
 
 function start(){
-    // Clear legacy cookies from previous versions
-    clearLegacyCookies();
-
     // Priority: URL parameter > configured default
     var getvar_endpoint = findGetParameter("endpoint");
     if (getvar_endpoint != null) {
@@ -627,8 +878,20 @@ function start(){
     $('#poweredby').text( CONFIG.poweredByLabel);
 
     // Live preview: update editor as user types in parameter fields
-    $('#param-panel').on('input change', '.param-input', function() {
+    $('#desc-params').on('input change', '.param-input', function() {
         if (_currentTemplate && _currentParams) {
+            // Dynamic title update (TMPL-07, D-03)
+            if (_currentParsedTitle) {
+                var titleView = {};
+                for (var i = 0; i < _currentParams.length; i++) {
+                    var p = _currentParams[i];
+                    var el = document.getElementById('param-' + p.name);
+                    titleView[p.name] = (el && el.value !== '') ? el.value : p.defaultValue;
+                }
+                $('#desc-title').text(Mustache.render(_currentParsedTitle, titleView));
+            }
+
+            // Existing query body substitution (unchanged)
             var substituted = substituteParams(_currentTemplate, _currentParams);
             var body = stripHeaders(substituted);
             _paramIgnoreChange = true;
@@ -641,20 +904,24 @@ function start(){
         }
     });
 
-    // Manual edit detection: hide param panel when user edits the query directly
+    // Manual edit detection: dim description panel when user edits the query directly
     editor.on('change', function(cm, changeObj) {
         if (_paramIgnoreChange) return;
-        if (_paramMode && changeObj.origin !== 'setValue') {
+        if (changeObj.origin !== 'setValue' && _panelState === 'active') {
+            dimPanel();
+            // Clear template state so params don't re-fire
             _paramMode = false;
             _currentTemplate = null;
             _currentParams = null;
-            $('#param-panel').slideUp();
         }
     });
 
     // Initialize endpoint health indicator
     $('#endpoint-health-dot').tooltip({ placement: 'bottom', trigger: 'hover' });
     checkEndpointHealth();
+
+    // Show welcome panel on page load (per D-09)
+    showWelcomePanel();
 }
 
 function showQuerySpinner() {

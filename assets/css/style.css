@@ -1,6 +1,17 @@
 .CodeMirror {
     border: 1px solid black;
     font-size: 13px;
+    height: auto;
+    min-height: 200px;
+}
+
+.CodeMirror-scroll {
+    overflow-y: hidden !important;
+    overflow-x: auto !important;
+}
+
+.CodeMirror-scrollbar-filler {
+    display: none !important;
 }
 
 footer{
@@ -43,7 +54,7 @@ footer p{
   display: none;
 }
 
-.panel-body{
+#examplesMainBody {
   max-height: 450px;
   overflow: scroll;
 }
@@ -123,15 +134,6 @@ footer p{
     color: #777;
 }
 
-/* Query info display above editor */
-#query-info {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    background-color: #f5f5f5;
-    border: 1px solid #e3e3e3;
-    border-radius: 4px;
-}
-
 /* Examples treeview node hover transition */
 .list-group-item {
     transition: background-color 0.15s ease-in-out;
@@ -167,14 +169,141 @@ footer p{
     padding: 10px;
 }
 
-/* Parameter panel */
-#param-panel { margin-bottom: 10px; }
-#param-panel .panel { margin-bottom: 0; }
-#param-panel .panel-heading { padding: 8px 15px; }
-#param-panel .panel-body { padding: 10px 15px; }
-#param-panel .form-group { margin-bottom: 8px; }
-#param-panel .form-group:last-child { margin-bottom: 0; }
-#param-panel label { font-weight: 600; font-size: 13px; }
+
+/* Description panel */
+#description-panel {
+    transition: opacity 0.3s ease;
+    margin-bottom: 8px;
+}
+
+#description-panel.panel-stale {
+    opacity: 0.5;
+}
+
+#description-panel .panel-body {
+    overflow: visible;
+}
+
+#description-panel .stale-indicator {
+    font-size: 12px;
+    color: #999;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Param row layout inside description panel */
+#desc-params .param-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#desc-params .param-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+#desc-params .param-item label {
+    font-weight: 700;
+    font-size: 13px;
+    white-space: nowrap;
+    margin-bottom: 0;
+}
+
+#desc-params .param-item .form-control {
+    width: auto;
+    min-width: 140px;
+    font-size: 13px;
+}
+
+#desc-params .autocomplete-wrapper {
+    position: relative;
+    display: inline-block;
+    min-width: 200px;
+}
+
+#desc-params .autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+}
+
+#desc-params .autocomplete-option {
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#desc-params .autocomplete-option:hover,
+#desc-params .autocomplete-option.active {
+    background-color: #337ab7;
+    color: #fff;
+}
+
+/* Autocomplete dropdown (generic) */
+.autocomplete-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    width: 360px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-top: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.autocomplete-option {
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.autocomplete-option:hover,
+.autocomplete-option.highlighted {
+    background-color: #f0f0f0;
+}
+
+.autocomplete-option-id {
+    font-weight: 700;
+    color: #337ab7;
+}
+
+.autocomplete-option-title {
+    color: #555;
+}
+
+.autocomplete-option-species {
+    color: #888;
+    font-size: 11px;
+}
+
+.autocomplete-option-more {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #999;
+    font-style: italic;
+}
 
 /* Examples panel error/warning messages */
 #examples .alert-warning,

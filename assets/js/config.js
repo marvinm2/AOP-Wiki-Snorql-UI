@@ -86,5 +86,31 @@ window.SNORQL_CONFIG = {
         ps: "http://www.wikidata.org/prop/statement/",
         pq: "http://www.wikidata.org/prop/qualifier/",
         bd: "http://www.bigdata.com/rdf#"
-    }
+    },
+    autocompleteTypes: {
+        aop: {
+            sparql: 'PREFIX aopo: <http://aopkb.org/aop_ontology#>\n' +
+                'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT DISTINCT (REPLACE(STR(?aop), "^.*/aop/", "") AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?aop a aopo:AdverseOutcomePathway ; dc:title ?title . }\n' +
+                'ORDER BY xsd:integer(?id)',
+            valueField: 'id',
+            labelField: 'name',
+            placeholder: 'Type AOP ID or title...'
+        },
+        keyEvent: {
+            sparql: 'PREFIX aopo: <http://aopkb.org/aop_ontology#>\n' +
+                'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT DISTINCT (REPLACE(STR(?ke), "^.*/aop.events/", "") AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?ke a aopo:KeyEvent ; dc:title ?title . }\n' +
+                'ORDER BY xsd:integer(?id)',
+            valueField: 'id',
+            labelField: 'name',
+            placeholder: 'Type Key Event ID or title...'
+        }
+    },
+    welcomeTitle: "AOP-Wiki RDF Explorer",
+    welcomeMessage: "<p>Browse and run SPARQL queries against the AOP-Wiki RDF endpoint.</p><ul><li><strong>Browse examples</strong> in the tree on the right — queries are organised by Adverse Outcome Pathways, Key Events, Key Event Relationships, Stressors, and federated queries</li><li><strong>Edit parameters</strong> to customise queries for your AOP, KE, or stressor of interest</li><li><strong>Write your own SPARQL</strong> directly in the editor below — namespace prefixes for the AOP ontology and identifier services are pre-loaded</li></ul>"
 };
