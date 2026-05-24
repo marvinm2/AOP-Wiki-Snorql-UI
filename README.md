@@ -2,7 +2,9 @@
 [![Docker Build](https://github.com/wikipathways/Snorql-UI/actions/workflows/docker.yml/badge.svg)](https://github.com/wikipathways/Snorql-UI/actions/workflows/docker.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-## Snorql-UI - A SPARQL Explorer
+## AOP-Wiki RDF Explorer (Snorql-UI fork)
+
+**Live deployment:** <https://aopwiki-snorql.vhp4safety.nl> — runs on the VHP4Safety Strato Docker Swarm. See [`DEPLOY.md`](DEPLOY.md) for the deployment, update, and rollback procedure.
 
 Simple SPARQL query interface based on the original idea of [kurtjx/SNORQL](https://github.com/kurtjx/SNORQL) and adapted from the fork [eccenca/SNORQL](https://github.com/eccenca/SNORQL) 
 
