@@ -1,0 +1,48 @@
+version: "3.8"
+
+networks:
+  core:
+    external: true
+
+services:
+  snorql:
+    image: ghcr.io/marvinm2/aop-wiki-snorql-ui:latest
+    networks:
+      - core
+    environment:
+      - SNORQL_ENDPOINT=${SNORQL_ENDPOINT:-https://aopwiki.rdf.bigcat-bioinformatics.org/sparql}
+      - SNORQL_EXAMPLES_REPO=${SNORQL_EXAMPLES_REPO:-https://github.com/marvinm2/AOP-Wiki-Queries}
+      - SNORQL_TITLE=${SNORQL_TITLE:-AOP-Wiki RDF Explorer}
+      - WELCOME_TITLE=${WELCOME_TITLE:-AOP-Wiki RDF Explorer}
+      - WELCOME_MESSAGE=${WELCOME_MESSAGE:-<p>Browse and run SPARQL queries against the AOP-Wiki RDF endpoint.</p><ul><li><strong>Browse examples</strong> in the tree on the right — queries are organised by Adverse Outcome Pathways, Key Events, Key Event Relationships, Stressors, and federated queries</li><li><strong>Edit parameters</strong> to customise queries for your AOP, KE, or stressor of interest</li><li><strong>Write your own SPARQL</strong> directly in the editor below — namespace prefixes for the AOP ontology and identifier services are pre-loaded</li></ul>}
+      - DEFAULT_GRAPH=${DEFAULT_GRAPH:-}
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      update_config:
+        order: start-first
+        failure_action: rollback
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.aopwiki-snorql.rule=Host(`aopwiki-snorql.vhp4safety.nl`)
+        - traefik.http.routers.aopwiki-snorql.entrypoints=websecure
+        - traefik.http.routers.aopwiki-snorql.tls=true
+        - traefik.http.routers.aopwiki-snorql.tls.certresolver=letsencrypt
+        - traefik.http.services.aopwiki-snorql.loadbalancer.server.port=80
+        - traefik.docker.network=core
+        # Ownership / metadata (admin-facing; not used by Traefik)
+        - tgx.service.owner=marvin.martens@maastrichtuniversity.nl
+        - tgx.service.team=Translational Genomics, Maastricht University
+        - tgx.service.repo=https://github.com/marvinm2/AOP-Wiki-Snorql-UI
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
