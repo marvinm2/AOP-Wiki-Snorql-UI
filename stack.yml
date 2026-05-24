@@ -25,7 +25,7 @@ services:
         failure_action: rollback
       labels:
         - traefik.enable=true
-        - traefik.http.routers.aopwiki-snorql.rule=Host(`aopwiki-snorql.vhp4safety.nl`)
+        - traefik.http.routers.aopwiki-snorql.rule=Host(`aopwiki.cloud.vhp4safety.nl`)
         - traefik.http.routers.aopwiki-snorql.entrypoints=websecure
         - traefik.http.routers.aopwiki-snorql.tls=true
         - traefik.http.routers.aopwiki-snorql.tls.certresolver=letsencrypt
