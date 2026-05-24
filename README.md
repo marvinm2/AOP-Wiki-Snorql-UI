@@ -4,7 +4,7 @@
 
 ## AOP-Wiki RDF Explorer (Snorql-UI fork)
 
-**Live deployment:** <https://aopwiki.cloud.vhp4safety.nl> — runs on the VHP4Safety Strato Docker Swarm. See [`DEPLOY.md`](DEPLOY.md) for the deployment, update, and rollback procedure.
+**Live deployment:** <https://aopwiki-rdf.vhp4safety.nl> — runs on the VHP4Safety Strato Docker Swarm. See [`DEPLOY.md`](DEPLOY.md) for the deployment, update, and rollback procedure.
 
 Simple SPARQL query interface based on the original idea of [kurtjx/SNORQL](https://github.com/kurtjx/SNORQL) and adapted from the fork [eccenca/SNORQL](https://github.com/eccenca/SNORQL) 
 
