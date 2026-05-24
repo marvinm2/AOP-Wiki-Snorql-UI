@@ -1,14 +1,14 @@
 # AOP-Wiki RDF Explorer — Deployment Guide
 
-Deployment of the Snorql UI to the VHP4Safety Docker Swarm cluster at `https://aopwiki-snorql.vhp4safety.nl`.
+Deployment of the Snorql UI to the VHP4Safety Docker Swarm cluster at `https://aopwiki.cloud.vhp4safety.nl`.
 
 The image is published to GHCR by the [`Docker Build`](.github/workflows/docker.yml) workflow on every push to `master` and on `v*` tags. The cluster pulls it from there — there is no local build step on the deploy host.
 
 ## Prerequisites
 
 1. **DNS A record** in the Strato control panel:
-   - `aopwiki-snorql.vhp4safety.nl` → `81.169.246.233` (tgx1)
-   - Verify propagation: `dig +short aopwiki-snorql.vhp4safety.nl`
+   - `aopwiki.cloud.vhp4safety.nl` → `81.169.246.233` (tgx1)
+   - Verify propagation: `dig +short aopwiki.cloud.vhp4safety.nl`
 
 2. **SSH access to tgx1** as a user in the `docker` group (e.g. `mmartens`). The `tgx1` alias is pre-configured in `~/.ssh/config` for cluster developers.
 
@@ -67,11 +67,11 @@ ssh tgx1 "docker service ps aopwiki-snorql_snorql"
 
 ssh tgx1 "docker service logs --tail 30 aopwiki-snorql_snorql"
 
-curl -sI https://aopwiki-snorql.vhp4safety.nl
+curl -sI https://aopwiki.cloud.vhp4safety.nl
 # Expect: HTTP/2 200, server: nginx (Traefik), valid Let's Encrypt cert
 ```
 
-Then browse to `https://aopwiki-snorql.vhp4safety.nl` and confirm the welcome panel + examples tree render.
+Then browse to `https://aopwiki.cloud.vhp4safety.nl` and confirm the welcome panel + examples tree render.
 
 ## Troubleshooting
 
