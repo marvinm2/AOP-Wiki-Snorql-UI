@@ -64,8 +64,48 @@ All configuration lives in `assets/js/config.js`. Edit this file to customize th
 | `renderers.enableSVGRenderer` | `false` | When `true`, renders SVG content inline in result table cells instead of showing the raw markup. |
 | `renderers.enableSMILESRenderer` | `false` | When `true`, renders SMILES chemical structure strings as images via the CDKDepict service. Only useful for chemistry datasets. |
 | `namespaces` | 7 standard prefixes | RDF namespace prefix mappings used to display compact QNames (e.g., `rdfs:label` instead of full URIs) in query results. |
+| `linkouts` | `[]` (empty) | Ordered array of navbar buttons, each `{ label, url, authors?, icon? }`. Rendered by `assets/js/linkouts.js`. Empty array (the default) renders no buttons. See [Navbar Linkouts](#navbar-linkouts) below. |
 
-**Note:** For Docker deployments, three fields (`endpoint`, `title`, `examplesRepo`) are set via `.env` environment variables and injected at container startup. All other `config.js` fields must be edited directly in the file.
+**Note:** For Docker deployments, three fields (`endpoint`, `title`, `examplesRepo`) are set via `.env` environment variables and injected at container startup. All other `config.js` fields — including `linkouts` — must be edited directly in the file (or supplied via a mounted `config.js`; see [Navbar Linkouts](#navbar-linkouts)).
+
+## Navbar Linkouts
+
+Add tutorial, documentation, or credit buttons to the navbar entirely through configuration — no source edits per instance. Define an ordered `linkouts` array on `window.SNORQL_CONFIG` in `assets/js/config.js`:
+
+```javascript
+linkouts: [
+  { label: "Tutorial", url: "https://example.org/tutorial", icon: "book" },
+  { label: "Credits",  url: "https://example.org/about", authors: "Jane Doe et al." }
+]
+```
+
+Each entry's fields:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `label` | yes | Button text. Rendered as **plain text** — any HTML is escaped. |
+| `url` | yes | Link target. Only `http:`, `https:`, and `mailto:` schemes are allowed; `javascript:`/`data:` (and obfuscated variants) are rejected and the entry is skipped. |
+| `authors` | no | Attribution string. When present it becomes the button's accessible name (`aria-label`/`title`); otherwise `label` is used. |
+| `icon` | no | A Bootstrap-3 glyphicon **suffix** (e.g. `book` → `glyphicon-book`). Allowlisted to `[a-z0-9-]`; invalid suffixes are silently dropped. |
+
+Buttons open in a new tab and carry `rel="noopener noreferrer"`. They render in array order. An empty or absent array renders no buttons and logs no console error.
+
+### Docker config-file override (linkouts is config-file-only)
+
+`linkouts` is **not** env/sed-injectable — unlike `endpoint`, `title`, and `examplesRepo`, it cannot be set through `.env`. To customize linkouts in a Docker deployment, bind-mount your own `config.js` over the one in the image:
+
+```yaml
+services:
+  snorql:
+    volumes:
+      - ./my-config.js:/usr/local/apache2/htdocs/assets/js/config.js:ro
+```
+
+Your mounted `config.js` must define the full `window.SNORQL_CONFIG` object (copy the in-repo file and edit the `linkouts` array).
+
+### Trust boundary — do not weaken the sanitizers
+
+The `linkouts` array is **untrusted input**: it travels through git, mounted files, and potentially third-party pull requests, then is rendered directly into the navbar DOM. `assets/js/linkouts.js` therefore (1) writes `label`/`authors` via `textContent` only — never `innerHTML` — and (2) allowlists URL schemes to `http`/`https`/`mailto`. These are correctness requirements, not stylistic choices. Do **not** "simplify" them away: removing the escaping reintroduces XSS via a crafted `label`, and removing the scheme check reintroduces `javascript:` execution via a crafted `url`.
 
 ## Adding SPARQL Examples
 
@@ -151,6 +191,8 @@ The `.env` file controls Docker deployment settings. Copy `.env.example` to `.en
 | `VIRTUOSO_HTTP_PORT` | `8890` | Virtuoso HTTP and SPARQL endpoint port. |
 
 See `.env.example` for the full list of variables including Virtuoso container settings and CORS configuration.
+
+**Note:** `linkouts` is config-file-only — it is not injected via `.env`. To set it in Docker, bind-mount a custom `config.js` (see [Navbar Linkouts → Docker config-file override](#docker-config-file-override-linkouts-is-config-file-only)).
 
 ## Customizing the UI
 
