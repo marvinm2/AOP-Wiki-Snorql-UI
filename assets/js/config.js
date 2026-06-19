@@ -25,7 +25,10 @@ window.SNORQL_CONFIG = {
     //     { label: "Tutorial", url: "https://example.org/tutorial", icon: "book" },
     //     { label: "Credits",  url: "https://example.org/about", authors: "Jane Doe et al." }
     //   ],
-    linkouts: [],
+    linkouts: [
+        { label: "Dashboard", url: "https://aopwiki-dashboard.vhp4safety.nl", icon: "stats" },
+        { label: "Schema", url: "https://github.com/marvinm2/AOPWikiRDF/blob/master/docs/schema.md", icon: "book" }
+    ],
     namespaces: {
         // Standard RDF prefixes
         rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
