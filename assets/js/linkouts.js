@@ -23,6 +23,34 @@
 
     var SAFE_SCHEMES = ['http:', 'https:', 'mailto:'];
     var ICON_SUFFIX = /^[a-z0-9-]+$/;
+    var STYLE_ID = 'snorql-linkout-styles';
+
+    // Theme-adaptive "ghost button" styling so linkouts read as buttons (not
+    // faint text links) and are spaced from the rest of the navbar. Border and
+    // text use the inherited navbar link color (currentColor), so this adapts to
+    // any navbar theme without hardcoding a palette. Scoped to #navbar-linkouts
+    // (the conventional mount id) with id-level specificity so it wins over
+    // Bootstrap's .navbar-nav>li>a rules. This is a CONSTANT string — no config
+    // values are interpolated, so injecting it is not an XSS surface. Deployers
+    // can override by defining their own .snorql-linkout rules.
+    var LINKOUT_CSS =
+        '#navbar-linkouts .snorql-linkout{display:inline-block;margin:8px 4px;' +
+        'padding:6px 12px;border:1px solid currentColor;border-radius:4px;' +
+        'line-height:1.42857143;opacity:.92}' +
+        '#navbar-linkouts .snorql-linkout:hover,' +
+        '#navbar-linkouts .snorql-linkout:focus{text-decoration:none;opacity:1;' +
+        'background-color:rgba(127,127,127,.18)}';
+
+    // Inject the stylesheet once, on first render. Skipped when there are no
+    // linkouts (renderLinkouts returns early), so an empty config adds nothing.
+    function ensureLinkoutStyles() {
+        if (typeof document === 'undefined' || !document.head) return;
+        if (document.getElementById(STYLE_ID)) return;
+        var style = document.createElement('style');
+        style.id = STYLE_ID;
+        style.appendChild(document.createTextNode(LINKOUT_CSS));
+        document.head.appendChild(style);
+    }
 
     // Verbatim copy of snorql.js escapeHtml (createTextNode -> innerHTML).
     // innerHTML here is a READ of escaped text, never a write of config values.
@@ -54,6 +82,7 @@
         var li = document.createElement('li');
         var a = document.createElement('a');
 
+        a.className = 'snorql-linkout';
         a.setAttribute('href', href);
         a.setAttribute('target', '_blank');
         a.setAttribute('rel', 'noopener noreferrer');
@@ -88,6 +117,7 @@
     function renderLinkouts(config, mountEl) {
         if (!config || !Array.isArray(config.linkouts) || config.linkouts.length === 0) return;
         if (!mountEl) return;
+        ensureLinkoutStyles();
         for (var i = 0; i < config.linkouts.length; i++) {
             var node = buildLinkoutNode(config.linkouts[i]);
             if (node) mountEl.appendChild(node);
