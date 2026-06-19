@@ -200,4 +200,31 @@ describe('render', () => {
     var node = Linkouts.buildLinkoutNode({ label: 'Bad', url: 'javascript:alert(1)' });
     expect(node).toBeNull();
   });
+
+  test('anchor carries the snorql-linkout hook class', () => {
+    var node = Linkouts.buildLinkoutNode({ label: 'Home', url: 'https://example.org' });
+    var anchor = node.querySelector('a');
+    expect(anchor.classList.contains('snorql-linkout')).toBe(true);
+  });
+});
+
+describe('styling', () => {
+  test('renderLinkouts injects the stylesheet once', () => {
+    var existing = document.getElementById('snorql-linkout-styles');
+    if (existing) existing.remove();
+    var mount = document.createElement('ul');
+    Linkouts.renderLinkouts({ linkouts: [{ label: 'X', url: 'https://e.org' }] }, mount);
+    expect(document.querySelectorAll('#snorql-linkout-styles').length).toBe(1);
+    // A second render must not duplicate the style element.
+    Linkouts.renderLinkouts({ linkouts: [{ label: 'Y', url: 'https://e.org' }] }, mount);
+    expect(document.querySelectorAll('#snorql-linkout-styles').length).toBe(1);
+  });
+
+  test('empty config injects no stylesheet', () => {
+    var existing = document.getElementById('snorql-linkout-styles');
+    if (existing) existing.remove();
+    var mount = document.createElement('ul');
+    Linkouts.renderLinkouts({ linkouts: [] }, mount);
+    expect(document.getElementById('snorql-linkout-styles')).toBeNull();
+  });
 });
