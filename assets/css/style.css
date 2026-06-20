@@ -381,6 +381,16 @@ footer p{
     color: #fff;
 }
 
+/* Keep navbar links (incl. linkout buttons) white on hover/focus/active —
+   Bootstrap's default darkens them to #333, which is invisible on the navy bar
+   and also darkens the linkout button's currentColor border. */
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-nav > li > a:active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
 .navbar-default .input-group-addon {
     background-color: rgba(255,255,255,0.1);
     color: #fff;
