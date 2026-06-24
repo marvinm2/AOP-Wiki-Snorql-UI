@@ -6,6 +6,20 @@
 
 **Live deployment:** <https://aopwiki-rdf.vhp4safety.nl> — runs on the VHP4Safety Strato Docker Swarm. See [`DEPLOY.md`](DEPLOY.md) for the deployment, update, and rollback procedure.
 
+### Relationship to upstream
+
+This is a customized deployment of [`wikipathways/Snorql-UI`](https://github.com/wikipathways/Snorql-UI) for the AOP-Wiki RDF endpoint (branding, namespaces, example queries, and Docker deployment).
+
+It is **not** a GitHub fork (the repository is standalone — GitHub's one-fork-per-account slot is taken by the older [`aopwiki-snorql-extended`](https://github.com/marvinm2/aopwiki-snorql-extended), which descends from a different lineage). Instead it tracks upstream through a manually-configured git remote and shares full history with it:
+
+```bash
+git remote add upstream https://github.com/wikipathways/Snorql-UI.git   # one-time
+git fetch upstream
+git merge upstream/master   # pull in upstream changes
+```
+
+Generic, broadly-useful features are contributed **back upstream** (so every Snorql-UI deployment benefits) and then pulled down here via `git merge upstream/master`; only AOP-Wiki-specific customization (endpoint, branding, namespaces, docs) is kept divergent. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the contribution pattern.
+
 Simple SPARQL query interface based on the original idea of [kurtjx/SNORQL](https://github.com/kurtjx/SNORQL) and adapted from the fork [eccenca/SNORQL](https://github.com/eccenca/SNORQL) 
 
 The purpose of this project is to develop a fully new UI implementation for Snorql that uses the latest web standards for HTML5, CSS3 and JQuery, and add new productivity features to facilitate query retrieval and sharing.
