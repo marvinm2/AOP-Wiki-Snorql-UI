@@ -39,6 +39,12 @@ jQuery(document).ready(function() {
             fetchExamples("-fs");
 		});
 
+		// Logo resets to a clean page, dropping the long ?q=... permalink URL.
+		jQuery("#index-page").on("click",function(event){
+            event.preventDefault();
+            window.location.href = window.location.pathname;
+		});
+
         //---------------- Populate query from URL (if available) -----------------------
 
         var query = findGetParameter("q");
