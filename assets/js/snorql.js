@@ -187,12 +187,30 @@ function sanitizeEnumValue(value, allowedOptions) {
     return null;
 }
 
+// Resolve the value to substitute for a param. Autocomplete fields show a
+// friendly "ID — Title" label but must substitute only the bare ID, so the
+// chosen ID is stashed in a data-selected-value attribute. Precedence:
+//   1. data-selected-value (set when the user picks from the dropdown)
+//   2. the leading token of the field text, split on the " — " separator
+//      (handles free-typed input; the em dash is safe for hyphenated IDs
+//      such as CAS numbers like "100-42-5")
+//   3. the raw field value
+//   4. the param default
+function readParamValue(param) {
+    var el = document.getElementById('param-' + param.name);
+    if (!el) return param.defaultValue;
+    var sel = el.getAttribute ? el.getAttribute('data-selected-value') : null;
+    if (sel !== null && sel !== '') return sel;
+    var raw = (el.value || '').trim();
+    if (raw === '') return param.defaultValue;
+    return raw.split(' — ')[0].trim() || raw;
+}
+
 function substituteParams(templateContent, params) {
     var view = {};
     for (var i = 0; i < params.length; i++) {
         var param = params[i];
-        var el = document.getElementById('param-' + param.name);
-        var value = (el && el.value !== '') ? el.value : param.defaultValue;
+        var value = readParamValue(param);
 
         if (param.type === 'string') {
             view[param.name] = sanitizeSparqlString(value);
@@ -329,8 +347,22 @@ function initAutocompleteField(inputId, typeName) {
     }, function(item) {
         return formatAutocompleteOption(item, typeConfig);
     });
-    // Pre-fetch data so it is cached when user first types
-    fetchAutocompleteData(typeName);
+    // Pre-fetch data so it is cached when user first types, and enrich the
+    // default value (a bare ID) into a friendly "ID — Title" label when found.
+    fetchAutocompleteData(typeName).done(function(list) {
+        var $inp = $('#' + inputId);
+        if (!$inp.length) return;
+        var cur = ($inp.val() || '').trim();
+        // Only enrich an untouched bare default (no selection, no separator).
+        if (!cur || $inp.attr('data-selected-value') != null || cur.indexOf(' — ') !== -1) return;
+        for (var i = 0; i < list.length; i++) {
+            if (list[i][typeConfig.valueField] === cur) {
+                var lbl = typeConfig.labelField ? list[i][typeConfig.labelField] : '';
+                $inp.val(lbl ? cur + ' — ' + lbl : cur).attr('data-selected-value', cur);
+                break;
+            }
+        }
+    });
 }
 
 function initAutocomplete(inputId, fetchFn, formatFn) {
@@ -370,8 +402,11 @@ function initAutocomplete(inputId, fetchFn, formatFn) {
         }
     }
 
-    function selectItem(value) {
-        $input.val(value);
+    function selectItem(value, label) {
+        // Show a friendly "ID — Title" label but stash the bare ID so that
+        // readParamValue substitutes only the ID into the query.
+        $input.val(label ? value + ' — ' + label : value);
+        $input.attr('data-selected-value', value);
         $dropdown.hide();
         highlightIndex = -1;
         $input.trigger('change');
@@ -382,6 +417,8 @@ function initAutocomplete(inputId, fetchFn, formatFn) {
     });
 
     $input.on('input', function() {
+        // Typing invalidates any prior dropdown selection.
+        $input.removeAttr('data-selected-value');
         var val = $input.val().trim().toLowerCase();
         if (!val) {
             $dropdown.hide();
@@ -404,7 +441,8 @@ function initAutocomplete(inputId, fetchFn, formatFn) {
         } else if (e.keyCode === 13) { // Enter
             e.preventDefault();
             if (highlightIndex >= 0 && highlightIndex < $opts.length) {
-                selectItem($opts.eq(highlightIndex).attr('data-value'));
+                var $opt = $opts.eq(highlightIndex);
+                selectItem($opt.attr('data-value'), $opt.find('.autocomplete-option-title').text());
             }
         } else if (e.keyCode === 27) { // Escape
             $dropdown.hide();
@@ -413,7 +451,8 @@ function initAutocomplete(inputId, fetchFn, formatFn) {
     });
 
     $dropdown.on('click', '.autocomplete-option', function() {
-        selectItem($(this).attr('data-value'));
+        var $o = $(this);
+        selectItem($o.attr('data-value'), $o.find('.autocomplete-option-title').text());
     });
 
     // Use namespaced event to avoid accumulating handlers across rebuilds
@@ -426,15 +465,8 @@ function initAutocomplete(inputId, fetchFn, formatFn) {
     });
 }
 
-// Legacy name-to-type map for .rq files not yet migrated to autocomplete: syntax
-var _legacyAutocompleteNames = {
-    'pathwayId': 'pathway',
-    'species': 'species'
-};
-
 function resolveAutocompleteType(param) {
-    if (param.autocompleteType) return param.autocompleteType;
-    return _legacyAutocompleteNames[param.name] || null;
+    return param.autocompleteType || null;
 }
 
 function buildParamPanel(params, templateContent) {
@@ -885,8 +917,7 @@ function start(){
                 var titleView = {};
                 for (var i = 0; i < _currentParams.length; i++) {
                     var p = _currentParams[i];
-                    var el = document.getElementById('param-' + p.name);
-                    titleView[p.name] = (el && el.value !== '') ? el.value : p.defaultValue;
+                    titleView[p.name] = readParamValue(p);
                 }
                 $('#desc-title').text(Mustache.render(_currentParsedTitle, titleView));
             }

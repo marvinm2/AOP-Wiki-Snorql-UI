@@ -220,7 +220,16 @@ footer p{
 #desc-params .autocomplete-wrapper {
     position: relative;
     display: inline-block;
-    min-width: 200px;
+    min-width: 320px;
+}
+
+/* Selected fields hold a longer "ID — Title" label, so fill the wrapper. */
+#desc-params .autocomplete-wrapper .param-input {
+    width: 100%;
+}
+
+#desc-params .param-input[data-selected-value] {
+    background-color: #f5fbff;
 }
 
 #desc-params .autocomplete-dropdown {

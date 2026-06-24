@@ -128,6 +128,42 @@ window.SNORQL_CONFIG = {
             valueField: 'id',
             labelField: 'name',
             placeholder: 'Type Key Event ID or title...'
+        },
+        stressor: {
+            sparql: 'PREFIX nci: <http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#>\n' +
+                'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT DISTINCT (REPLACE(STR(?s), "^.*/aop.stressor/", "") AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?s a nci:C54571 ; dc:title ?title . }\n' +
+                'ORDER BY xsd:integer(?id)',
+            valueField: 'id',
+            labelField: 'name',
+            placeholder: 'Type stressor ID or name...'
+        },
+        chemical: {
+            // value is the CAS registry number (a string with hyphens, e.g. 100-42-5)
+            sparql: 'PREFIX cheminf: <http://semanticscience.org/resource/CHEMINF_>\n' +
+                'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
+                'SELECT DISTINCT (str(?casid) AS ?id) (str(?title) as ?name)\n' +
+                'WHERE { ?cas a cheminf:000000 ; dc:title ?title ; cheminf:000446 ?casid . }\n' +
+                'ORDER BY ?title',
+            valueField: 'id',
+            labelField: 'name',
+            placeholder: 'Type CAS number or chemical name...'
+        },
+        taxon: {
+            // NCBI taxa carry several synonym titles per id; concatenate them all
+            // so the field is searchable by latin name, common name, or taxon id.
+            sparql: 'PREFIX ncbitaxon: <http://purl.bioontology.org/ontology/NCBITAXON/>\n' +
+                'PREFIX dc: <http://purl.org/dc/elements/1.1/>\n' +
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n' +
+                'SELECT (REPLACE(STR(?taxon), "^.*/NCBITAXON/", "") AS ?id) (GROUP_CONCAT(DISTINCT str(?title); separator=" / ") AS ?name)\n' +
+                'WHERE { ?taxon a ncbitaxon:131567 ; dc:title ?title . }\n' +
+                'GROUP BY ?taxon\n' +
+                'ORDER BY xsd:integer(REPLACE(STR(?taxon), "^.*/NCBITAXON/", ""))',
+            valueField: 'id',
+            labelField: 'name',
+            placeholder: 'Type NCBI taxon ID, latin or common name...'
         }
     },
     welcomeTitle: "AOP-Wiki RDF Explorer",

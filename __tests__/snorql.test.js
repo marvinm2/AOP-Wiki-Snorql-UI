@@ -287,6 +287,102 @@ describe('buildParamPanel: enum HTML rendering with {value, label} objects', () 
   });
 });
 
+// ─── Autocomplete: readParamValue decouples display label from substituted value ───
+
+// Register a fake param input in the DOM mock with the given field text and
+// optional data-selected-value attribute.
+function setParamElement(sb, name, value, selectedValue) {
+  const attrs = {};
+  if (selectedValue !== undefined) attrs['data-selected-value'] = selectedValue;
+  sb.document._elements['param-' + name] = {
+    value: value,
+    getAttribute: function(k) { return Object.prototype.hasOwnProperty.call(attrs, k) ? attrs[k] : null; }
+  };
+}
+
+describe('readParamValue: display label vs substituted value', () => {
+  test('data-selected-value wins over the verbose field text', () => {
+    setParamElement(sandbox, 'aop_id', '12 — Mitochondrial dysfunction', '12');
+    const result = vm.runInContext('readParamValue({ name: "aop_id", defaultValue: "1" })', sandbox);
+    expect(result).toBe('12');
+  });
+
+  test('free-typed "98 — Foo" with no selection returns the leading token "98"', () => {
+    setParamElement(sandbox, 'aop_id', '98 — Foo');
+    const result = vm.runInContext('readParamValue({ name: "aop_id", defaultValue: "1" })', sandbox);
+    expect(result).toBe('98');
+  });
+
+  test('bare typed id returns as-is', () => {
+    setParamElement(sandbox, 'aop_id', '35');
+    const result = vm.runInContext('readParamValue({ name: "aop_id", defaultValue: "1" })', sandbox);
+    expect(result).toBe('35');
+  });
+
+  test('empty field falls back to the param default', () => {
+    setParamElement(sandbox, 'aop_id', '');
+    const result = vm.runInContext('readParamValue({ name: "aop_id", defaultValue: "12" })', sandbox);
+    expect(result).toBe('12');
+  });
+
+  test('CAS id with hyphens is preserved (em-dash split, never hyphen split)', () => {
+    setParamElement(sandbox, 'cas_id', '100-42-5 — Styrene');
+    const result = vm.runInContext('readParamValue({ name: "cas_id", defaultValue: "" })', sandbox);
+    expect(result).toBe('100-42-5');
+  });
+
+  test('missing element returns the param default', () => {
+    const result = vm.runInContext('readParamValue({ name: "absent", defaultValue: "7" })', sandbox);
+    expect(result).toBe('7');
+  });
+});
+
+describe('substituteParams: substitutes the bare id, not the display label', () => {
+  test('autocomplete param substitutes the selected id into the query body', () => {
+    setParamElement(sandbox, 'aop_id', '12 — Mitochondrial dysfunction', '12');
+    const params = JSON.stringify([{ name: 'aop_id', type: 'autocomplete', autocompleteType: 'aop', defaultValue: '1', label: 'AOP' }]);
+    const out = vm.runInContext('substituteParams("SELECT * WHERE { BIND(aop:{{aop_id}} AS ?a) }", ' + params + ')', sandbox);
+    expect(out).toContain('aop:12');
+    expect(out).not.toContain('Mitochondrial');
+  });
+});
+
+// ─── Autocomplete: header parsing + type resolution + config registry ───
+
+describe('parseRqHeaders: autocomplete type parsing', () => {
+  ['stressor', 'chemical', 'taxon'].forEach((t) => {
+    test('autocomplete:' + t + ' parses to type autocomplete with autocompleteType ' + t, () => {
+      const content = '# param: p|autocomplete:' + t + '|1|Label\n\nSELECT * WHERE {}';
+      const result = vm.runInContext('parseRqHeaders(' + JSON.stringify(content) + ')', sandbox);
+      expect(result.params[0].type).toBe('autocomplete');
+      expect(result.params[0].autocompleteType).toBe(t);
+    });
+  });
+});
+
+describe('resolveAutocompleteType', () => {
+  test('returns the param.autocompleteType when present', () => {
+    const result = vm.runInContext('resolveAutocompleteType({ name: "p", autocompleteType: "stressor" })', sandbox);
+    expect(result).toBe('stressor');
+  });
+
+  test('returns null when no autocompleteType is set', () => {
+    const result = vm.runInContext('resolveAutocompleteType({ name: "species" })', sandbox);
+    expect(result).toBeNull();
+  });
+});
+
+describe('config: new autocomplete types are registered', () => {
+  ['stressor', 'chemical', 'taxon'].forEach((t) => {
+    test(t + ' type has sparql, valueField=id, labelField=name', () => {
+      expect(vm.runInContext('CONFIG.autocompleteTypes.' + t + '.valueField', sandbox)).toBe('id');
+      expect(vm.runInContext('CONFIG.autocompleteTypes.' + t + '.labelField', sandbox)).toBe('name');
+      expect(vm.runInContext('typeof CONFIG.autocompleteTypes.' + t + '.sparql', sandbox)).toBe('string');
+      expect(vm.runInContext('CONFIG.autocompleteTypes.' + t + '.sparql.length', sandbox)).toBeGreaterThan(0);
+    });
+  });
+});
+
 // ─── Gap 4: escapeHtml XSS prevention ───
 
 describe('escapeHtml: XSS prevention helper', () => {
