@@ -46,3 +46,51 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # Single-graph Virtuoso serving the live AOP-Wiki RDF dataset (graph
+  # http://aopwiki.org/). Ported from the strato1 AOP-Wiki-EP deployment so the
+  # SNORQL UI no longer depends on the external bigcat endpoint. Pinned to the
+  # DNS-primary node (h3068544 == tgx1) alongside the reload cron, so the weekly
+  # reload's `docker exec` always finds the task locally. Data lives on
+  # GlusterFS so it survives container recreation.
+  virtuoso:
+    image: openlink/virtuoso-opensource-7:7.2.11
+    networks:
+      - core
+    environment:
+      - DBA_PASSWORD=${DBA_PASSWORD:-dba}
+      - SPARQL_UPDATE=false
+      - VIRT_Parameters_DirsAllowed=., ../vad, /usr/share/proj, /database/data
+    volumes:
+      - /mnt/gluster/docker/aopwiki-snorql/virtuoso-data:/database
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname==h3068544.stratoserver.net
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        # SPARQL endpoint at /sparql on the same host(s) as the UI. More specific
+        # than the UI router (PathPrefix), and given explicit higher priority.
+        # The bigcat host is added in the DNS-cutover phase, not before (else the
+        # HTTP-01 challenge would loop while DNS still points at strato1).
+        - traefik.http.routers.aopwiki-snorql-sparql.rule=Host(`aopwiki-rdf.vhp4safety.nl`) && PathPrefix(`/sparql`)
+        - traefik.http.routers.aopwiki-snorql-sparql.entrypoints=websecure
+        - traefik.http.routers.aopwiki-snorql-sparql.tls=true
+        - traefik.http.routers.aopwiki-snorql-sparql.tls.certresolver=letsencrypt
+        - traefik.http.routers.aopwiki-snorql-sparql.priority=100
+        - traefik.http.services.aopwiki-snorql-sparql.loadbalancer.server.port=8890
+        - traefik.docker.network=core
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8890' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
