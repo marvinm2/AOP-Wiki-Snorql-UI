@@ -25,7 +25,7 @@ services:
         failure_action: rollback
       labels:
         - traefik.enable=true
-        - traefik.http.routers.aopwiki-snorql.rule=Host(`aopwiki-rdf.vhp4safety.nl`)
+        - traefik.http.routers.aopwiki-snorql.rule=Host(`aopwiki-rdf.vhp4safety.nl`,`aopwiki.rdf.bigcat-bioinformatics.org`)
         - traefik.http.routers.aopwiki-snorql.entrypoints=websecure
         - traefik.http.routers.aopwiki-snorql.tls=true
         - traefik.http.routers.aopwiki-snorql.tls.certresolver=letsencrypt
@@ -49,10 +49,11 @@ services:
 
   # Single-graph Virtuoso serving the live AOP-Wiki RDF dataset (graph
   # http://aopwiki.org/). Ported from the strato1 AOP-Wiki-EP deployment so the
-  # SNORQL UI no longer depends on the external bigcat endpoint. Pinned to the
-  # DNS-primary node (h3068544 == tgx1) alongside the reload cron, so the weekly
-  # reload's `docker exec` always finds the task locally. Data lives on
-  # GlusterFS so it survives container recreation.
+  # SNORQL UI no longer depends on the external bigcat endpoint. Not node-pinned:
+  # swarm may run it on either node (data is on replicated GlusterFS). stop-first
+  # guarantees only one container ever opens virtuoso.db at a time, and the
+  # weekly reload runs on both nodes with a top-of-script guard so only the node
+  # currently hosting this task does the `docker exec` load.
   virtuoso:
     image: openlink/virtuoso-opensource-7:7.2.11
     networks:
@@ -65,18 +66,15 @@ services:
       - /mnt/gluster/docker/aopwiki-snorql/virtuoso-data:/database
     deploy:
       replicas: 1
-      placement:
-        constraints:
-          - node.hostname==h3068544.stratoserver.net
+      update_config:
+        order: stop-first
       restart_policy:
         condition: on-failure
       labels:
         - traefik.enable=true
         # SPARQL endpoint at /sparql on the same host(s) as the UI. More specific
         # than the UI router (PathPrefix), and given explicit higher priority.
-        # The bigcat host is added in the DNS-cutover phase, not before (else the
-        # HTTP-01 challenge would loop while DNS still points at strato1).
-        - traefik.http.routers.aopwiki-snorql-sparql.rule=Host(`aopwiki-rdf.vhp4safety.nl`) && PathPrefix(`/sparql`)
+        - traefik.http.routers.aopwiki-snorql-sparql.rule=Host(`aopwiki-rdf.vhp4safety.nl`,`aopwiki.rdf.bigcat-bioinformatics.org`) && PathPrefix(`/sparql`)
         - traefik.http.routers.aopwiki-snorql-sparql.entrypoints=websecure
         - traefik.http.routers.aopwiki-snorql-sparql.tls=true
         - traefik.http.routers.aopwiki-snorql-sparql.tls.certresolver=letsencrypt
