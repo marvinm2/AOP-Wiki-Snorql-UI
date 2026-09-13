@@ -26,6 +26,7 @@ window.SNORQL_CONFIG = {
     //     { label: "Credits",  url: "https://example.org/about", authors: "Jane Doe et al." }
     //   ],
     linkouts: [
+        { label: "API", url: "/api/docs", icon: "cloud" },
         { label: "Dashboard", url: "https://aopwiki-dashboard.vhp4safety.nl", icon: "stats" },
         { label: "Schema", url: "https://github.com/marvinm2/AOPWikiRDF/blob/master/docs/schema.md", icon: "book" }
     ],

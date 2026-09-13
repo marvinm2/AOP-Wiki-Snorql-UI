@@ -47,6 +47,56 @@ services:
       retries: 3
       start_period: 20s
 
+  # REST API over the Virtuoso below (source: github.com/marvinm2/AOP-Wiki-API). Stateless, so
+  # start-first. Served under /api on the explorer hosts: Traefik strips the prefix and the app
+  # reads X-Forwarded-Prefix for its docs and links. The container healthcheck is in the image.
+  # It talks to Virtuoso over `core` by its stack-qualified name; plain `virtuoso` is ambiguous
+  # there because other stacks also have a service with that name.
+  api:
+    image: ghcr.io/marvinm2/aop-wiki-api:${API_TAG:-latest}
+    networks:
+      - core
+    environment:
+      - SPARQL_ENDPOINT=http://aopwiki-snorql_virtuoso:8890/sparql
+      - DATA_GRAPH=http://aopwiki.org/
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      update_config:
+        order: start-first
+        failure_action: rollback
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=core
+        - traefik.http.services.aopwiki-api.loadbalancer.server.port=8000
+        # /api on the explorer hosts: above the UI catch-all router (default priority = rule
+        # length, ~76) and below the /sparql router (100).
+        - traefik.http.routers.aopwiki-api.rule=Host(`aopwiki-rdf.vhp4safety.nl`,`aopwiki.rdf.bigcat-bioinformatics.org`) && (Path(`/api`) || PathPrefix(`/api/`))
+        - traefik.http.routers.aopwiki-api.priority=90
+        - traefik.http.routers.aopwiki-api.entrypoints=websecure
+        - traefik.http.routers.aopwiki-api.tls=true
+        - traefik.http.routers.aopwiki-api.tls.certresolver=letsencrypt
+        - traefik.http.routers.aopwiki-api.middlewares=aopwiki-api-strip
+        - traefik.http.routers.aopwiki-api.service=aopwiki-api
+        - traefik.http.middlewares.aopwiki-api-strip.stripprefix.prefixes=/api
+        # Cutover from the aopwiki-grlc stack: uncomment to take over the dedicated API host
+        # (priority 200 wins over grlc's router; remove these labels again to roll back).
+        # - traefik.http.routers.aopwiki-api-host.rule=Host(`aopwiki.api.bigcat-bioinformatics.org`)
+        # - traefik.http.routers.aopwiki-api-host.priority=200
+        # - traefik.http.routers.aopwiki-api-host.entrypoints=websecure
+        # - traefik.http.routers.aopwiki-api-host.tls=true
+        # - traefik.http.routers.aopwiki-api-host.tls.certresolver=letsencrypt
+        # - traefik.http.routers.aopwiki-api-host.service=aopwiki-api
+        - tgx.service.owner=marvin.martens@maastrichtuniversity.nl
+        - tgx.service.team=Translational Genomics, Maastricht University
+        - tgx.service.repo=https://github.com/marvinm2/AOP-Wiki-API
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
   # Single-graph Virtuoso serving the live AOP-Wiki RDF dataset (graph
   # http://aopwiki.org/). Ported from the strato1 AOP-Wiki-EP deployment so the
   # SNORQL UI no longer depends on the external bigcat endpoint. Not node-pinned:
@@ -55,7 +105,10 @@ services:
   # weekly reload runs on both nodes with a top-of-script guard so only the node
   # currently hosting this task does the `docker exec` load.
   virtuoso:
-    image: openlink/virtuoso-opensource-7:7.2.11
+    # Pinned to the digest the service runs on: `docker stack deploy` re-resolves a plain tag,
+    # and an upstream retag would restart this Virtuoso (the 2026-09-02 empty-store incident
+    # followed a restart of this GlusterFS-backed database).
+    image: openlink/virtuoso-opensource-7:7.2.11@sha256:09a3cadc653344f198af96214187d3a1eb0d5ab5b8278bbd8243ca55845f9efe
     networks:
       - core
     environment:
