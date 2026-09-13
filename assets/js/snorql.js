@@ -220,6 +220,10 @@ function substituteParams(templateContent, params) {
         } else if (param.type === 'enum') {
             var enumVal = sanitizeEnumValue(value, param.options);
             view[param.name] = enumVal !== null ? enumVal : param.defaultValue;
+        } else if (param.type === 'autocomplete') {
+            // A picked value is a bare id, which escaping leaves unchanged. Free-typed text is
+            // escaped like a string param, so a quote cannot break the query.
+            view[param.name] = sanitizeSparqlString(value);
         } else {
             view[param.name] = value;
         }
@@ -1133,9 +1137,130 @@ function displayResult(json, resultTitle) {
         p.appendChild(document.createTextNode('[no results]'));
         div.appendChild(p);
     } else {
-        div.appendChild(jsonToHTML(json));
+        var table = jsonToHTML(json);
+        attachResultSorting(table);
+        div.appendChild(buildResultToolbar(table, json.results.bindings.length));
+        div.appendChild(table);
     }
     setResult(div);
+}
+
+// ─── Client-side filtering and sorting of the results table ───
+// Both act on the rendered table only. Downloads re-run the query and always contain every row.
+
+// Text of one row, cells joined by a tab so a filter word cannot match across a cell boundary.
+// Cached on the row: results can run to tens of thousands of rows and the filter runs per keystroke.
+function resultRowText(row) {
+    if (row._snorqlFilterText === undefined) {
+        var parts = [];
+        for (var i = 0; i < row.cells.length; i++) {
+            parts.push((row.cells[i].textContent || '').trim());
+        }
+        row._snorqlFilterText = parts.join('\t').toLowerCase();
+    }
+    return row._snorqlFilterText;
+}
+
+// Shows the rows that contain every whitespace-separated word of the term; returns how many are shown.
+function filterResultRows(table, term) {
+    var words = (term || '').toLowerCase().split(/\s+/).filter(function(w) { return w !== ''; });
+    var tbody = table.tBodies[0];
+    var visible = 0;
+    if (!tbody) return 0;
+    for (var i = 0; i < tbody.rows.length; i++) {
+        var row = tbody.rows[i];
+        var text = resultRowText(row);
+        var match = true;
+        for (var w = 0; w < words.length; w++) {
+            if (text.indexOf(words[w]) === -1) { match = false; break; }
+        }
+        row.style.display = match ? '' : 'none';
+        if (match) visible++;
+    }
+    return visible;
+}
+
+// Numbers sort numerically; everything else sorts naturally, so aop:3 comes before aop:12.
+function compareCellValues(a, b) {
+    var na = Number(a), nb = Number(b);
+    if (a !== '' && b !== '' && isFinite(na) && isFinite(nb)) return na - nb;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function sortResultTable(table, colIndex, descending) {
+    var tbody = table.tBodies[0];
+    if (!tbody) return;
+    var rows = Array.prototype.slice.call(tbody.rows);
+    rows.sort(function(r1, r2) {
+        var c1 = r1.cells[colIndex] ? (r1.cells[colIndex].textContent || '').trim() : '';
+        var c2 = r2.cells[colIndex] ? (r2.cells[colIndex].textContent || '').trim() : '';
+        var c = compareCellValues(c1, c2);
+        return descending ? -c : c;
+    });
+    for (var i = 0; i < rows.length; i++) {
+        tbody.appendChild(rows[i]);
+    }
+}
+
+// Click (or Enter/Space) on a header sorts ascending, then toggles; aria-sort marks the active column.
+function attachResultSorting(table) {
+    if (!table.tHead || !table.tHead.rows.length) return;
+    var headers = table.tHead.rows[0].cells;
+    function sortBy(th, col) {
+        var descending = th.getAttribute('aria-sort') === 'ascending';
+        for (var j = 0; j < headers.length; j++) {
+            headers[j].removeAttribute('aria-sort');
+        }
+        th.setAttribute('aria-sort', descending ? 'descending' : 'ascending');
+        sortResultTable(table, col, descending);
+    }
+    for (var i = 0; i < headers.length; i++) {
+        (function(th, col) {
+            th.className = (th.className ? th.className + ' ' : '') + 'sortable';
+            th.tabIndex = 0;
+            th.title = 'Sort by ' + (th.textContent || '');
+            th.addEventListener('click', function() { sortBy(th, col); });
+            th.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    sortBy(th, col);
+                }
+            });
+        })(headers[i], i);
+    }
+}
+
+function buildResultToolbar(table, total) {
+    var bar = document.createElement('div');
+    bar.className = 'results-toolbar form-inline';
+
+    var input = document.createElement('input');
+    input.type = 'search';
+    input.className = 'form-control input-sm results-filter';
+    input.placeholder = 'Filter results...';
+    input.setAttribute('aria-label', 'Filter results');
+    input.title = 'Shows rows containing every word you type. Filters this table only; downloads include all results.';
+
+    var count = document.createElement('small');
+    count.className = 'text-muted results-count';
+    count.setAttribute('aria-live', 'polite');
+
+    function update() {
+        var visible = filterResultRows(table, input.value);
+        count.textContent = input.value.trim() ? 'Showing ' + visible + ' of ' + total + ' rows' : '';
+    }
+
+    var timer = null;
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(update, 150);
+    });
+
+    bar.appendChild(input);
+    bar.appendChild(document.createTextNode(' '));
+    bar.appendChild(count);
+    bar._update = update;
+    return bar;
 }
 
 function jsonToHTML(json) {

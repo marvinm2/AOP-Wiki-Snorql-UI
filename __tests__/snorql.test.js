@@ -345,6 +345,21 @@ describe('substituteParams: substitutes the bare id, not the display label', () 
     expect(out).toContain('aop:12');
     expect(out).not.toContain('Mitochondrial');
   });
+
+  test('autocomplete free text is escaped like a string param', () => {
+    setParamElement(sandbox, 'chem_name', 'bisphenol "A"');
+    const params = JSON.stringify([{ name: 'chem_name', type: 'autocomplete', autocompleteType: 'chemical', defaultValue: '', label: 'Chemical' }]);
+    const template = JSON.stringify('FILTER(regex(?n, "{{chem_name}}", "i"))');
+    const out = vm.runInContext('substituteParams(' + template + ', ' + params + ')', sandbox);
+    expect(out).toContain('bisphenol \\"A\\"');
+  });
+
+  test('a picked CAS number passes through escaping unchanged', () => {
+    setParamElement(sandbox, 'chem_name', '80-05-7 — Bisphenol A', '80-05-7');
+    const params = JSON.stringify([{ name: 'chem_name', type: 'autocomplete', autocompleteType: 'chemical', defaultValue: '', label: 'Chemical' }]);
+    const out = vm.runInContext('substituteParams("STR(?cas) = \\"{{chem_name}}\\"", ' + params + ')', sandbox);
+    expect(out).toBe('STR(?cas) = "80-05-7"');
+  });
 });
 
 // ─── Autocomplete: header parsing + type resolution + config registry ───

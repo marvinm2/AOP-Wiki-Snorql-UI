@@ -64,6 +64,45 @@ footer p{
     overflow-y: scroll;
 }
 
+/* Results filter: stays visible while scrolling through a long table */
+.results-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #fff;
+    padding: 6px 0 8px;
+}
+
+.results-toolbar .results-filter {
+    width: 260px;
+    max-width: 100%;
+}
+
+.results-toolbar .results-count {
+    margin-left: 8px;
+}
+
+#queryresults th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+#queryresults th.sortable::after {
+    content: " \2195";
+    color: #bbb;
+}
+
+#queryresults th[aria-sort="ascending"]::after {
+    content: " \25B2";
+    color: #333;
+}
+
+#queryresults th[aria-sort="descending"]::after {
+    content: " \25BC";
+    color: #333;
+}
+
 #permalink-url{
   font-size: 24px;
   text-align: center;
