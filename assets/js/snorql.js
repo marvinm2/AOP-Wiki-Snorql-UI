@@ -71,14 +71,131 @@ function changeExamplesRepo() {
     // Changes are temporary (session only)
 }
 
-function getPrefixes(){
-
-    prefixes = '';
-    for (prefix in CONFIG.namespaces) {
-        var uri = CONFIG.namespaces[prefix];
-        prefixes = prefixes + 'PREFIX ' + prefix + ': <' + uri + '>\n';
+// ---- Phase 9 — RELIAB-01: PREFIX block delivery ----
+// Detect inline PREFIX declarations in the user's query so we don't
+// double-declare on strict endpoints (Stardog, GraphDB, Fuseki).
+// Regex per CONTEXT decision 1: matches "PREFIX foo:" at the start of a line.
+function getInlineDeclaredPrefixes(query) {
+    var declared = {};
+    var re = /^\s*PREFIX\s+(\w+):/gim;
+    var m;
+    while ((m = re.exec(query)) !== null) {
+        declared[m[1]] = true;
     }
-    return prefixes;
+    return declared;
+}
+
+// Strip string literals from a SPARQL query body so prefix-token scanning
+// does not match `cur:label` inside `"..."`, `'...'`, `"""..."""`, or
+// `'''...'''`. We replace each literal with a same-length run of spaces to
+// preserve offsets. Order matters: triple-quoted forms must be matched
+// BEFORE single-quoted forms.
+function stripSparqlStringLiterals(query) {
+    return query
+        .replace(/"""[\s\S]*?"""/g, function(s) { return s.replace(/[^\n]/g, ' '); })
+        .replace(/'''[\s\S]*?'''/g, function(s) { return s.replace(/[^\n]/g, ' '); })
+        .replace(/"(?:\\.|[^"\\])*"/g, function(s) { return s.replace(/[^\n]/g, ' '); })
+        .replace(/'(?:\\.|[^'\\])*'/g, function(s) { return s.replace(/[^\n]/g, ' '); });
+}
+
+// Find every `prefix:localname` token used in the query body (outside literals).
+// Returns an object map { prefixName: true }.
+function getUsedPrefixes(query) {
+    var stripped = stripSparqlStringLiterals(query);
+    var used = {};
+    var re = /\b([A-Za-z_][\w-]*):[A-Za-z_]/g;
+    var m;
+    while ((m = re.exec(stripped)) !== null) {
+        used[m[1]] = true;
+    }
+    return used;
+}
+
+// Build a PREFIX preamble of every CONFIG.namespaces entry not already
+// declared inline. Used by sendPrefixBlock === true (force mode).
+function buildAllMissingPrefixes(query) {
+    var declared = getInlineDeclaredPrefixes(query);
+    var preamble = '';
+    for (var p in CONFIG.namespaces) {
+        if (!declared[p]) {
+            preamble += 'PREFIX ' + p + ': <' + CONFIG.namespaces[p] + '>\n';
+        }
+    }
+    return preamble;
+}
+
+// Build a PREFIX preamble of every CONFIG.namespaces entry that is BOTH
+// referenced by the query AND not already declared inline.
+// Used by sendPrefixBlock === 'auto' (default).
+function buildUsedPrefixes(query) {
+    var declared = getInlineDeclaredPrefixes(query);
+    var used = getUsedPrefixes(query);
+    var preamble = '';
+    for (var p in CONFIG.namespaces) {
+        if (used[p] && !declared[p]) {
+            preamble += 'PREFIX ' + p + ': <' + CONFIG.namespaces[p] + '>\n';
+        }
+    }
+    return preamble;
+}
+
+// Public entry point: takes the user's raw query and returns the
+// to-send query with the appropriate PREFIX preamble prepended,
+// honoring CONFIG.sendPrefixBlock ('auto' | true | false).
+function prepareQueryForSend(rawQuery) {
+    var mode = (window.SNORQL_CONFIG && window.SNORQL_CONFIG.sendPrefixBlock !== undefined)
+        ? window.SNORQL_CONFIG.sendPrefixBlock
+        : 'auto';
+    if (mode === false) return rawQuery;
+    var preamble = (mode === true)
+        ? buildAllMissingPrefixes(rawQuery)
+        : buildUsedPrefixes(rawQuery);
+    return preamble + rawQuery;
+}
+
+// Mode-aware backwards-compat shim. The original getPrefixes() (snorql.js:74-82,
+// pre-Phase-9) returned ALL CONFIG.namespaces entries unconditionally and
+// leaked `prefixes` and `prefix` as globals. The 5 callers in script.js
+// (lines 26, 122, 128, 134, 175) assigned the result to a `queryText`
+// variable that was never sent. Plan 03 removes those assignments.
+//
+// PER PLAN-CHECKER W-7 (Option a — chosen for cleaner semantics):
+// the shim now ALIASES prepareQueryForSend so any external fork still
+// calling getPrefixes(query) honors the configured sendPrefixBlock mode
+// instead of silently bypassing it. Callers passing no argument get the
+// preamble for an empty query — the safest no-op fallback.
+//
+// Note: the shim now returns the FULL prefixed query (preamble + rawQuery),
+// not the bare preamble that the pre-Phase-9 helper returned. This is a
+// deliberate semantic change: the pre-Phase-9 callers were broken (they
+// concatenated again with `+ query`, double-prepending). The 5 in-tree
+// callers are removed by Task 2; any external caller picking up this shim
+// gets the correct, modal-respecting prefixed query without further work.
+function getPrefixes(query) {
+    var q = (typeof query === 'string') ? query : '';
+    return prepareQueryForSend(q);
+}
+
+// ---- Phase 9 — RELIAB-03: GET → POST length switch ----
+// Returns 'POST' when the URL-encoded prefixed query plus endpoint plus
+// standard query-string parameters would exceed CONFIG.maxGetUrlBytes
+// (default 4000 bytes — well under nginx 8K and Cloudflare 8K limits).
+// Returns 'GET' otherwise. Per CONTEXT decision 4, the threshold is
+// computed against the PREFIXED query (output of prepareQueryForSend),
+// not the raw user query — otherwise the threshold leaks ~50–250 bytes.
+//
+// The single threshold (CONFIG.maxGetUrlBytes) gates BOTH the method switch
+// and Plan 06's permalink refusal — one mental model for the user.
+function chooseMethod(endpoint, prefixedQuery) {
+    var maxBytes = (window.SNORQL_CONFIG && window.SNORQL_CONFIG.maxGetUrlBytes) || 4000;
+    var defaultGraph = (window.SNORQL_CONFIG && window.SNORQL_CONFIG.defaultGraph) || '';
+    var dgPart = defaultGraph ? ('&default-graph-uri=' + encodeURIComponent(defaultGraph)) : '';
+    var estimated = endpoint.length
+                  + '?query='.length
+                  + encodeURIComponent(prefixedQuery).length
+                  + '&output=json'.length
+                  + dgPart.length;
+    return estimated > maxBytes ? 'POST' : 'GET';
 }
 
 function parseRqHeaders(content) {
@@ -974,7 +1091,8 @@ function hideQuerySpinner() {
 function doQuery(url, sparql, callback) {
 
     service = new SPARQL.Service(url);
-    service.setMethod('GET');
+    var _phase9Prefixed = prepareQueryForSend(sparql);   // RELIAB-03: compute once for chooseMethod + service.query (declare-once-reuse-twice)
+    service.setMethod(chooseMethod(url, _phase9Prefixed));
     if (CONFIG.defaultGraph != "") {
         service.addDefaultGraph(CONFIG.defaultGraph);
     }
@@ -983,13 +1101,38 @@ function doQuery(url, sparql, callback) {
     service.setOutput('json');
 
     showQuerySpinner();
-    service.query(sparql, {
+    service.query(_phase9Prefixed, {
             success: callback,
             failure: onFailure
     });
 }
 
 var SPARQL_ERROR_PATTERNS = [
+    // ---- Phase 9 — RELIAB-02: status-code-driven friendly errors ----
+    // These entries are matched BEFORE the body-pattern entries below.
+    // Each carries a statusCodes:[..] array; onFailure (below) checks
+    // statusCodes first, then falls through to body-pattern matching.
+    {
+        statusCodes: [504, 524],
+        message: 'The connection to the SPARQL server timed out.',
+        hint: 'The server may be busy. Try again, or simplify your query (add LIMIT, narrow filters).'
+    },
+    {
+        statusCodes: [502],
+        message: 'The SPARQL gateway returned a bad-gateway error.',
+        hint: 'The endpoint may be down. Try again in a moment.'
+    },
+    {
+        statusCodes: [503],
+        message: 'The SPARQL server is temporarily unavailable.',
+        hint: 'Try again in a moment.'
+    },
+    {
+        statusCodes: [500],
+        pattern: /transaction.*timed|timed.*out/i,
+        message: 'The query took longer than the server allows.',
+        hint: 'Try adding LIMIT, narrowing filters, or simplifying joins.'
+    },
     {
         pattern: /Syntax error/i,
         message: 'There is a syntax error in your query. Check for missing brackets, quotes, or keywords.',
@@ -1058,11 +1201,32 @@ function onFailure(report) {
     var friendlyMessage = 'Something went wrong with your query.';
     var friendlyHint = 'Try checking your query syntax or verifying the endpoint is available.';
 
+    // Phase 9 — RELIAB-02: status-code matching runs BEFORE body matching.
+    // Each entry may carry statusCodes:[..], pattern:RegExp, or both.
+    var statusNum = (typeof report.status === 'number') ? report.status : -1;
     for (var i = 0; i < SPARQL_ERROR_PATTERNS.length; i++) {
-        if (SPARQL_ERROR_PATTERNS[i].pattern.test(rawError)) {
-            friendlyMessage = SPARQL_ERROR_PATTERNS[i].message;
-            friendlyHint = SPARQL_ERROR_PATTERNS[i].hint;
+        var entry = SPARQL_ERROR_PATTERNS[i];
+        var statusOk = entry.statusCodes ? entry.statusCodes.indexOf(statusNum) !== -1 : true;
+        var bodyOk = entry.pattern ? entry.pattern.test(rawError) : true;
+        if (!entry.statusCodes && !entry.pattern) continue;
+        if (statusOk && bodyOk) {
+            friendlyMessage = entry.message;
+            friendlyHint = entry.hint;
             break;
+        }
+    }
+
+    // Phase 9 — RELIAB-02 + RELIAB-05: disambiguate xhr.status === 0.
+    // The flag _timeoutFired is set by sparql.js xhr.ontimeout (Plan 02).
+    if (statusNum === 0) {
+        if (report._timeoutFired) {
+            var timeoutMs = (window.SNORQL_CONFIG && window.SNORQL_CONFIG.queryTimeoutMs) || 60000;
+            var timeoutSec = Math.round(timeoutMs / 1000);
+            friendlyMessage = 'Network timeout — query exceeded ' + timeoutSec + 's.';
+            friendlyHint = 'The endpoint may be busy or the query is too complex. Try adding LIMIT or simplifying the query.';
+        } else {
+            friendlyMessage = 'Request did not complete.';
+            friendlyHint = 'Check the endpoint health indicator (top-right) for CORS or connectivity status.';
         }
     }
 
@@ -1435,7 +1599,8 @@ function nodeToHTML(node, linkMaker) {
 function exportResults(url, sparql, type, output) {
 
     service = new SPARQL.Service(url);
-    service.setMethod('GET');
+    var _phase9Prefixed = prepareQueryForSend(sparql);   // RELIAB-03: compute once for chooseMethod + service.query (declare-once-reuse-twice)
+    service.setMethod(chooseMethod(url, _phase9Prefixed));
     if (CONFIG.defaultGraph != "") {
         service.addDefaultGraph(CONFIG.defaultGraph);
     }
@@ -1451,7 +1616,7 @@ function exportResults(url, sparql, type, output) {
         service.setOutput(type);
     }
 
-    service.query(sparql, {
+    service.query(_phase9Prefixed, {
             success: function(json) { renderOutput(json, type); },
             failure: onExportFailure
     });

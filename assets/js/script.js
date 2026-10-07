@@ -23,7 +23,6 @@ jQuery(document).ready(function() {
             event.preventDefault();
 
             var query = editor.getDoc().getValue();
-            var queryText = getPrefixes() + query;
 
             var queryEncoded = "?q="+encodeURIComponent(query)+"&endpoint="+encodeURIComponent(jQuery("#endpoint").val().trim());
             var url = window.location.href.split('?')[0] + queryEncoded;
@@ -179,24 +178,59 @@ jQuery(document).ready(function() {
             $('#prefixesModal').modal().find('#prefixesModalBody');
         });
 
-        jQuery("#generate-permalink").on("click",function(e){
+        // Phase 9 — RELIAB-04: permalink guard. Refuse oversized queries with a
+        // visible inline message. If Bitly fails, show the full ?q= URL instead.
+        function _showPermalinkInlineMsg(text, isError) {
+            var $msg = jQuery('#permalink-inline-msg');
+            if ($msg.length === 0) {
+                $msg = jQuery('<span id="permalink-inline-msg" class="permalink-inline-msg" style="margin-left:8px;display:inline-block;"></span>');
+                jQuery('#generate-permalink').after($msg);
+            }
+            $msg.text(text);
+            $msg.css('color', isError ? '#a94442' : '#3c763d');
+            $msg.show();
+            clearTimeout(_showPermalinkInlineMsg._timer);
+            _showPermalinkInlineMsg._timer = setTimeout(function() { $msg.fadeOut(400); }, 8000);
+        }
 
+        jQuery("#generate-permalink").on("click", function(e) {
             e.preventDefault();
 
-            var query = editor.getDoc().getValue().trim();
-            var url = window.location.href.split('?')[0] +
-                "?q=" + encodeURIComponent(query) +
-                "&endpoint=" + encodeURIComponent(jQuery("#endpoint").val().trim());
+            var query = editor.getDoc().getValue();
+            query = query.trim();
 
-            var showLink = function(link, note) {
-                $('#permalink-input').val(link);
-                $('#permalink-open').attr('href', link);
-                $('#permalink-copied').hide();
-                $('#permalink-note').text(note || '').toggle(!!note);
-                $('#permalinkModal').modal();
-            };
+            // Compute prefixed-query bytes against the Snorql page URL (not the
+            // SPARQL endpoint URL — this is the URL the recipient's browser
+            // must accept when opening the short link). Acknowledged: a query
+            // exactly at maxGetUrlBytes prefixed-encoded may refuse permalink
+            // while still executing via GET — fail-closed is correct because
+            // the "copy the query text directly" message remains accurate.
+            var endpointUrl = jQuery("#endpoint").val().trim();
+            var prefixed = (typeof prepareQueryForSend === 'function')
+                ? prepareQueryForSend(query)
+                : query;
+            var maxBytes = (window.SNORQL_CONFIG && window.SNORQL_CONFIG.maxGetUrlBytes) || 4000;
+            var permalinkBase = window.location.href.split('?')[0];
+            var encodedQuery = encodeURIComponent(prefixed);
+            var encodedEndpoint = encodeURIComponent(endpointUrl);
+            var totalBytes = permalinkBase.length
+                           + '?q='.length + encodedQuery.length
+                           + '&endpoint='.length + encodedEndpoint.length;
+
+            if (totalBytes > maxBytes) {
+                _showPermalinkInlineMsg(
+                    'Query too long to permalink (' + totalBytes + ' bytes; limit ' + maxBytes + '). ' +
+                    'Copy the query text directly to share it.',
+                    true
+                );
+                return;
+            }
+
+            var queryParam = "?q=" + encodeURIComponent(query) + "&endpoint=" + encodedEndpoint;
+            var url = permalinkBase + queryParam;
 
             var accessToken = "b0021fe4839aefbc4e7967b3578443d9ea6e89bf";
+            var params = { "long_url" : url.trim() };
 
             $.ajax({
                 url: "https://api-ssl.bitly.com/v4/shorten",
@@ -207,31 +241,21 @@ jQuery(document).ready(function() {
                 beforeSend: function (xhr) {
                     xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
                 },
-                data: JSON.stringify({ "long_url": url })
+                data: JSON.stringify(params)
             }).done(function(data) {
-                showLink(data.link);
-            }).fail(function(data) {
-                // Bitly rejects some long queries; the full ?q= URL works as a
-                // permalink too, so fall back to it instead of showing nothing.
-                console.log(data);
-                var note = "A short link could not be created, so this is the full link.";
-                // Apache's default request-line limit is 8190 bytes.
-                if (url.length > 8000) {
-                    note += " It is very long and may be rejected when opened; share the query text instead if so.";
-                }
-                showLink(url, note);
+                $('#permalink-url').html("<a href=\""+data.link+"\" target=\"_blank\">"+data.link+"</a>");
+                $('#permalinkModal').modal();
+            }).fail(function() {
+                // Bitly rejects some long URLs. The unshortened ?q= URL is a working
+                // permalink too, so show that rather than no link at all.
+                $('#permalink-url').empty().append(
+                    $('<span class="text-warning"></span>').text(
+                        'Bitly could not shorten this link, so this is the full permalink:'),
+                    '<br>',
+                    $('<a target="_blank" style="word-break:break-all;"></a>').attr('href', url).text(url)
+                );
+                $('#permalinkModal').modal();
             });
-        });
-
-        jQuery("#permalink-copy").on("click",function(){
-            var url = $('#permalink-input').val();
-            var done = function(){ $('#permalink-copied').show(); };
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(url).then(done);
-            } else {
-                $('#permalink-input').trigger('select');
-                if (document.execCommand('copy')) { done(); }
-            }
         });
     });
 })(jQuery);

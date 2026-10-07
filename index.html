@@ -118,7 +118,7 @@
 			</div>
 			
 			<div class="col-md-4">
-				<h4>SPARQL Examples:</h4>
+				<h4>Load SPARQL Examples:</h4>
 				<div class="panel panel-default">
 				  <div class="panel-heading">
 						<div class="input-group">
@@ -138,6 +138,7 @@
 						<button type="button" class="btn btn-default" id="btn-clear-search">Clear</button>
 						<!-- </form> -->
 						<hr/>
+						<h4>Find SPARQL Examples</h4>
 						<div class="list-group" id="examples"></div>
 				  </div>
 				</div>
@@ -191,14 +192,10 @@
 		  </div>
 		  <div class="modal-body">
 			
-			<input id="permalink-input" type="text" class="form-control" readonly onfocus="this.select()" />
-			<p id="permalink-note" class="text-warning" style="display:none; margin-top:10px;"></p>
-
+			<p id="permalink-url"></p>
+			
 		  </div>
 		  <div class="modal-footer">
-			<span id="permalink-copied" class="text-success" style="display:none;">Copied</span>
-			<a id="permalink-open" class="btn btn-default" target="_blank" rel="noopener">Open</a>
-			<button id="permalink-copy" type="button" class="btn btn-primary">Copy link</button>
 		  </div>
 		</div>
 	  </div>
