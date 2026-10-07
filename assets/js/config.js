@@ -49,7 +49,7 @@ window.SNORQL_CONFIG = {
 
         // Chemical identifiers
         cas: "https://identifiers.org/cas/",
-        chebi: "https://identifiers.org/chebi/",
+        chebi: "https://identifiers.org/chebi/CHEBI:",
         inchikey: "https://identifiers.org/inchikey/",
         "chembl.compound": "https://identifiers.org/chembl.compound/",
         "pubchem.compound": "https://identifiers.org/pubchem.compound/",
