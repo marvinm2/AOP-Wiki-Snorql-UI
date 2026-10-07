@@ -191,10 +191,16 @@
 		  </div>
 		  <div class="modal-body">
 			
-			<p id="permalink-url"></p>
-			
+			<input id="permalink-input" type="text" class="form-control" readonly onfocus="this.select()" />
+			<p id="permalink-warning" class="text-warning" style="display:none; margin-top:10px;">
+				This query is very long, so the link may be rejected by the server or some browsers. Share the query text if the link does not open.
+			</p>
+
 		  </div>
 		  <div class="modal-footer">
+			<span id="permalink-copied" class="text-success" style="display:none;">Copied</span>
+			<a id="permalink-open" class="btn btn-default" target="_blank" rel="noopener">Open</a>
+			<button id="permalink-copy" type="button" class="btn btn-primary">Copy link</button>
 		  </div>
 		</div>
 	  </div>

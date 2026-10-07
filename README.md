@@ -229,7 +229,6 @@ Create the directory first: `mkdir virtuoso-data`
 | Footer | `index.html` | Edit footer section |
 | Namespaces | `assets/js/config.js` | `namespaces` object in `SNORQL_CONFIG` |
 | Navbar linkouts | `assets/js/config.js` | `linkouts` array in `SNORQL_CONFIG` (see below) |
-| Bitly token | `assets/js/script.js` | `accessToken` (line 180) |
 
 ### Navbar Linkouts
 

@@ -183,34 +183,32 @@ jQuery(document).ready(function() {
 
             e.preventDefault();
 
-            var query = editor.getDoc().getValue();
-            var queryText = getPrefixes() + query;
-	    query = query.trim()
-            query = "?q="+encodeURIComponent(query)+"&endpoint="+encodeURIComponent(jQuery("#endpoint").val().trim());
+            // The permalink is the page URL itself (?q=...&endpoint=...), which the
+            // page already reads on load. No external shortener: a shortener needs a
+            // token in client code and fails on long queries.
+            var query = editor.getDoc().getValue().trim();
+            var url = window.location.href.split('?')[0] +
+                "?q=" + encodeURIComponent(query) +
+                "&endpoint=" + encodeURIComponent(jQuery("#endpoint").val().trim());
 
-            var url = window.location.href.split('?')[0] + query;
+            $('#permalink-input').val(url);
+            $('#permalink-open').attr('href', url);
+            $('#permalink-copied').hide();
+            // Apache's default request-line limit is 8190 bytes; longer links are
+            // refused with 414 when opened.
+            $('#permalink-warning').toggle(url.length > 8000);
+            $('#permalinkModal').modal();
+        });
 
-            var accessToken = "b0021fe4839aefbc4e7967b3578443d9ea6e89bf";
-            var params = {
-                "long_url" : url.trim()
-            };
-
-            $.ajax({
-                url: "https://api-ssl.bitly.com/v4/shorten",
-                cache: false,
-                dataType: "json",
-                method: "POST",
-                contentType: "application/json",
-                beforeSend: function (xhr) {
-                    xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
-                },
-                data: JSON.stringify(params)
-            }).done(function(data) {
-                $('#permalink-url').html("<a href=\""+data.link+"\" target=\"_blank\">"+data.link+"</a>");
-                $('#permalinkModal').modal();
-            }).fail(function(data) {
-                console.log(data);
-            });
+        jQuery("#permalink-copy").on("click",function(){
+            var url = $('#permalink-input').val();
+            var done = function(){ $('#permalink-copied').show(); };
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(url).then(done);
+            } else {
+                $('#permalink-input').trigger('select');
+                if (document.execCommand('copy')) { done(); }
+            }
         });
     });
 })(jQuery);
