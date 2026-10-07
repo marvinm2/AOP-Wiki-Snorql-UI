@@ -164,8 +164,7 @@ jQuery(document).ready(function() {
         });
 
         // Phase 9 — RELIAB-04: permalink guard. Refuse oversized queries with a
-        // visible inline message; surface Bitly failures (network/auth) instead
-        // of swallowing them in console.log.
+        // visible inline message. If Bitly fails, show the full ?q= URL instead.
         function _showPermalinkInlineMsg(text, isError) {
             var $msg = jQuery('#permalink-inline-msg');
             if ($msg.length === 0) {
@@ -231,12 +230,16 @@ jQuery(document).ready(function() {
             }).done(function(data) {
                 $('#permalink-url').html("<a href=\""+data.link+"\" target=\"_blank\">"+data.link+"</a>");
                 $('#permalinkModal').modal();
-            }).fail(function(xhr) {
-                _showPermalinkInlineMsg(
-                    'Could not shorten the permalink (Bitly request failed). ' +
-                    'You can still copy the full URL from the address bar after running the query.',
-                    true
+            }).fail(function() {
+                // Bitly rejects some long URLs. The unshortened ?q= URL is a working
+                // permalink too, so show that rather than no link at all.
+                $('#permalink-url').empty().append(
+                    $('<span class="text-warning"></span>').text(
+                        'Bitly could not shorten this link, so this is the full permalink:'),
+                    '<br>',
+                    $('<a target="_blank" style="word-break:break-all;"></a>').attr('href', url).text(url)
                 );
+                $('#permalinkModal').modal();
             });
         });
     });
