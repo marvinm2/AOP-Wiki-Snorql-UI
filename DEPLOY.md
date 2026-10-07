@@ -1,6 +1,6 @@
 # AOP-Wiki RDF Explorer — Deployment Guide
 
-Deployment of the Snorql UI to the VHP4Safety Docker Swarm cluster at `https://aopwiki-rdf.vhp4safety.nl`.
+Deployment of the AOP-Wiki RDF Explorer to the VHP4Safety Docker Swarm cluster (`https://aopwiki.rdf.bigcat-bioinformatics.org`, alias `https://aopwiki-rdf.vhp4safety.nl`). The cluster-side reference is `/mnt/gluster/documentation/services/aopwiki-snorql.md` on tgx1.
 
 The image is published to GHCR by the [`Docker Build`](.github/workflows/docker.yml) workflow on every push to `master` and on `v*` tags. The cluster pulls it from there — there is no local build step on the deploy host.
 
@@ -37,6 +37,16 @@ docker stack deploy -c stack.yml aopwiki-snorql
 ```
 
 Traefik picks up the labels automatically and provisions a Let's Encrypt cert via HTTP-01 challenge once DNS resolves to tgx1. The URL is live within about a minute.
+
+> **Do not run `docker stack deploy` on the live stack** without first comparing the live
+> Virtuoso service spec with `stack.yml`: CLI-filled defaults differ, so a stack deploy restarts
+> Virtuoso. Roll out the UI with `docker service update` as below. Details in the cluster doc.
+
+## Updating the engine
+
+The UI code comes from `ghcr.io/wikipathways/snorql-ui`, pinned by minor version in the
+`Dockerfile`. To take a new engine release, merge the Dependabot PR (or bump the `FROM` tag by
+hand), let CI publish the new image, then roll it out as below.
 
 ## Updating to a new release
 

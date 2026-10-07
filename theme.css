@@ -1,0 +1,195 @@
+/*
+ * AOP-Wiki RDF Explorer theme (Maastricht University colours), loaded after the
+ * engine's style.css.
+ */
+
+footer {
+    min-height: 50px;
+    background-color: #f0f0f0;
+    color: #002147;
+    padding: 8px 0;
+    text-align: center;
+}
+
+footer a {
+    color: #2A6496;
+}
+
+footer a:hover {
+    color: #1e4d73;
+}
+
+#result {
+    margin-bottom: 60px;
+}
+
+.btn-dark {
+    background-color: #343A40;
+    border-color: #2b3035;
+    color: #fff;
+}
+.btn-dark:hover, .btn-dark:focus, .btn-dark:active {
+    background-color: #2b3035;
+    border-color: #22262a;
+    color: #fff;
+}
+
+.query-spinner .spinner {
+    border-top-color: #2A6496;
+}
+
+.dot-checking {
+    background-color: #2A6496;
+}
+
+/* UM Brand: Navbar */
+.navbar-default {
+    background-color: #002147;
+    border-color: #001a38;
+    margin-bottom: 0;
+}
+
+.navbar-default > .container {
+    width: 100%;
+    display: flex !important;
+    align-items: center;
+}
+
+.navbar-default .navbar-header {
+    float: none;
+}
+
+.navbar-default .navbar-brand {
+    height: auto;
+    padding: 0 15px;
+}
+
+.navbar-default .navbar-collapse {
+    float: none;
+    flex: 1;
+    display: flex !important;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus {
+    background-color: transparent;
+}
+
+.navbar-default .navbar-nav > li > a {
+    color: #fff;
+}
+
+/* Keep navbar links (incl. linkout buttons) white on hover/focus/active —
+   Bootstrap's default darkens them to #333, which is invisible on the navy bar
+   and also darkens the linkout button's currentColor border. */
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-default .navbar-nav > li > a:active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.navbar-default .input-group-addon {
+    background-color: rgba(255,255,255,0.1);
+    color: #fff;
+    border-color: rgba(255,255,255,0.2);
+}
+
+.navbar-default .form-control {
+    border-color: rgba(255,255,255,0.2);
+}
+
+.navbar-form.navbar-right {
+    padding-right: 0;
+    margin-right: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* UM Brand: Button color overrides */
+
+/* Reset = UM blue */
+.btn-danger {
+    background-color: #2A6496;
+    border-color: #245580;
+    color: #fff;
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+    background-color: #235a87;
+    border-color: #1e4d73;
+    color: #fff;
+}
+
+/* Query and Search = UM orange */
+.btn-success {
+    background-color: #E87722;
+    border-color: #d46b1e;
+    color: #fff;
+}
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background-color: #d46b1e;
+    border-color: #c0601a;
+    color: #fff;
+}
+
+/* Export dropdown = light blue */
+.btn-warning {
+    background-color: #5B9BD5;
+    border-color: #4a8bc5;
+    color: #fff;
+}
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+    background-color: #4a8bc5;
+    border-color: #3a7bb5;
+    color: #fff;
+}
+
+/* Export JSON = Steel blue */
+.btn-primary {
+    background-color: #4472C4;
+    border-color: #3a65b3;
+    color: #fff;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #3a65b3;
+    border-color: #3058a2;
+    color: #fff;
+}
+
+/* Export XML = Teal blue */
+.btn-info {
+    background-color: #2E75B6;
+    border-color: #2868a4;
+    color: #fff;
+}
+.btn-info:hover, .btn-info:focus, .btn-info:active {
+    background-color: #2868a4;
+    border-color: #225b92;
+    color: #fff;
+}
+
+/* Get Permalink = Gray */
+.btn-secondary {
+    background-color: #6C757D;
+    border-color: #60686f;
+    color: #fff;
+}
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
+    background-color: #60686f;
+    border-color: #545b62;
+    color: #fff;
+}
+
+/* Show Prefixes = Off-white */
+.btn-light {
+    background-color: #f8f9fa;
+    border-color: #ddd;
+    color: #333;
+}
+.btn-light:hover, .btn-light:focus, .btn-light:active {
+    background-color: #e9ecef;
+    border-color: #ccc;
+    color: #333;
+}

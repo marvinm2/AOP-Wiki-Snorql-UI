@@ -1,24 +1,8 @@
-FROM httpd:2.4
- 
-ADD ./assets /usr/local/apache2/htdocs/assets/
-COPY ./index.html /usr/local/apache2/htdocs/
- 
-ENV PATH /usr/local/apache2/bin:$PATH
+# AOP-Wiki RDF Explorer: the Snorql UI engine (wikipathways/Snorql-UI) plus this
+# instance's config, theme and images. Engine updates are a tag bump here
+# (Dependabot opens a PR when a new engine minor version is published).
+FROM ghcr.io/wikipathways/snorql-ui:1.2
 
-VOLUME /usr/local/apache2/htdocs
-
-EXPOSE 80 443
-
-WORKDIR /app
- 
-COPY ./script.sh /app/script.sh
-
-RUN chmod 755 /app/script.sh
-RUN chmod +x /app/script.sh
-
-COPY ./entrypoint.sh /app/entrypoint.sh
-
-RUN chmod 755 /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+COPY config.js /usr/local/apache2/htdocs/assets/js/config.js
+COPY theme.css /usr/local/apache2/htdocs/assets/css/theme.css
+COPY images/ /usr/local/apache2/htdocs/assets/images/
