@@ -183,21 +183,44 @@ jQuery(document).ready(function() {
 
             e.preventDefault();
 
-            // The permalink is the page URL itself (?q=...&endpoint=...), which the
-            // page already reads on load. No external shortener: a shortener needs a
-            // token in client code and fails on long queries.
             var query = editor.getDoc().getValue().trim();
             var url = window.location.href.split('?')[0] +
                 "?q=" + encodeURIComponent(query) +
                 "&endpoint=" + encodeURIComponent(jQuery("#endpoint").val().trim());
 
-            $('#permalink-input').val(url);
-            $('#permalink-open').attr('href', url);
-            $('#permalink-copied').hide();
-            // Apache's default request-line limit is 8190 bytes; longer links are
-            // refused with 414 when opened.
-            $('#permalink-warning').toggle(url.length > 8000);
-            $('#permalinkModal').modal();
+            var showLink = function(link, note) {
+                $('#permalink-input').val(link);
+                $('#permalink-open').attr('href', link);
+                $('#permalink-copied').hide();
+                $('#permalink-note').text(note || '').toggle(!!note);
+                $('#permalinkModal').modal();
+            };
+
+            var accessToken = "b0021fe4839aefbc4e7967b3578443d9ea6e89bf";
+
+            $.ajax({
+                url: "https://api-ssl.bitly.com/v4/shorten",
+                cache: false,
+                dataType: "json",
+                method: "POST",
+                contentType: "application/json",
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("Authorization", "Bearer " + accessToken);
+                },
+                data: JSON.stringify({ "long_url": url })
+            }).done(function(data) {
+                showLink(data.link);
+            }).fail(function(data) {
+                // Bitly rejects some long queries; the full ?q= URL works as a
+                // permalink too, so fall back to it instead of showing nothing.
+                console.log(data);
+                var note = "A short link could not be created, so this is the full link.";
+                // Apache's default request-line limit is 8190 bytes.
+                if (url.length > 8000) {
+                    note += " It is very long and may be rejected when opened; share the query text instead if so.";
+                }
+                showLink(url, note);
+            });
         });
 
         jQuery("#permalink-copy").on("click",function(){
