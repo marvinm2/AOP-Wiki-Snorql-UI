@@ -6,7 +6,9 @@ networks:
 
 services:
   snorql:
-    image: ghcr.io/marvinm2/aop-wiki-snorql-ui:latest
+    # Pinned to the digest the service runs (engine 1.4.1, 2026-11-11): docker stack deploy
+    # re-resolves a plain tag. Bump this with every UI release.
+    image: ghcr.io/marvinm2/aop-wiki-snorql-ui@sha256:5fce3119786fa0fb5868c2b21a29e70d3c5c21afcddbee5a6ff45d00c3888486
     networks:
       - core
     environment:

@@ -44,25 +44,25 @@ Traefik picks up the labels automatically and provisions a Let's Encrypt cert vi
 
 ## Updating the engine
 
-The UI code comes from `ghcr.io/wikipathways/snorql-ui`, pinned by minor version in the
+The UI code comes from `ghcr.io/wikipathways/snorql-ui`, pinned by version in the
 `Dockerfile`. To take a new engine release, merge the Dependabot PR (or bump the `FROM` tag by
 hand), let CI publish the new image, then roll it out as below.
 
 ## Updating to a new release
 
-When a new image is published to GHCR (every push to `master`):
+When a new image is published to GHCR (every push to `master`), roll it out by digest, so the
+service runs exactly that build:
 
 ```bash
 ssh tgx1
-cd ~/aopwiki-snorql
-docker service update --force --image ghcr.io/marvinm2/aop-wiki-snorql-ui:latest aopwiki-snorql_snorql
+docker pull -q ghcr.io/marvinm2/aop-wiki-snorql-ui:latest
+docker image inspect ghcr.io/marvinm2/aop-wiki-snorql-ui:latest --format '{{index .RepoDigests 0}}'
+docker service update --with-registry-auth --image ghcr.io/marvinm2/aop-wiki-snorql-ui@sha256:<digest> aopwiki-snorql_snorql
 ```
 
-For a specific tag (e.g. a release):
-
-```bash
-docker service update --image ghcr.io/marvinm2/aop-wiki-snorql-ui:v1.2.0 aopwiki-snorql_snorql
-```
+Then put the same digest in `stack.yml` (here and in `~/aopwiki-snorql/stack.yml`), so a later
+`docker stack deploy` keeps that build instead of re-resolving a tag. Record the previous digest
+as the rollback in the cluster doc.
 
 `update_config: order: start-first` in `stack.yml` means a new task is started and verified healthy before the old one is removed — zero-downtime by default.
 
@@ -70,7 +70,7 @@ docker service update --image ghcr.io/marvinm2/aop-wiki-snorql-ui:v1.2.0 aopwiki
 
 ```bash
 ssh tgx1 "docker service ls --filter name=aopwiki-snorql"
-# Expect: aopwiki-snorql_snorql   replicated   1/1   ghcr.io/marvinm2/aop-wiki-snorql-ui:latest
+# Expect: aopwiki-snorql_snorql   replicated   1/1   ghcr.io/marvinm2/aop-wiki-snorql-ui@sha256:<digest>
 
 ssh tgx1 "docker service ps aopwiki-snorql_snorql"
 # CURRENT STATE should be 'Running' with no errors
