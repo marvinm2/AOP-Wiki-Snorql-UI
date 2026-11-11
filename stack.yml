@@ -18,8 +18,10 @@ services:
       - DEFAULT_GRAPH=${DEFAULT_GRAPH:-}
     deploy:
       replicas: 1
+      # any, not on-failure: a clean exit (code 0) would otherwise leave it down
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
       update_config:
         order: start-first
         failure_action: rollback
@@ -61,8 +63,10 @@ services:
       - DATA_GRAPH=http://aopwiki.org/
     deploy:
       replicas: 1
+      # any, not on-failure: a clean exit (code 0) would otherwise leave it down
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
       update_config:
         order: start-first
         failure_action: rollback
@@ -121,6 +125,8 @@ services:
       replicas: 1
       update_config:
         order: stop-first
+      # Still on-failure: switching to any restarts the store, so it waits for a
+      # planned window (issue #19).
       restart_policy:
         condition: on-failure
       labels:
