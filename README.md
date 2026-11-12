@@ -12,10 +12,20 @@ published as `ghcr.io/wikipathways/snorql-ui`. The image built here is that engi
 
 | File | What it sets |
 |---|---|
-| [`config.js`](config.js) | endpoint, examples repo ([AOP-Wiki-Queries](https://github.com/marvinm2/AOP-Wiki-Queries), branch `main`), namespaces, autocomplete types (AOP, key event, stressor, chemical, taxon), navbar linkouts, logo, favicon, footer |
+| [`config.js`](config.js) | endpoint, examples ([AOP-Wiki-Queries](https://github.com/marvinm2/AOP-Wiki-Queries): the index it publishes on its `examples-index` branch, `examplesFormat: "index"`), namespaces, autocomplete types (AOP, key event, stressor, chemical, taxon), navbar linkouts, logo, favicon, footer |
 | [`theme.css`](theme.css) | Maastricht University colours, full-width navbar |
 | [`images/`](images) | logo, favicon, TGX logo |
 | [`stack.yml`](stack.yml) | Docker Swarm stack: this UI, the AOP-Wiki API and the Virtuoso endpoint |
+
+## Example queries
+
+The examples are `.ttl` files in [AOP-Wiki-Queries](https://github.com/marvinm2/AOP-Wiki-Queries),
+each with a permanent identifier (`AOPQ012`) and a version; see its `AUTHORING.md`. The editor
+loads the index that repository publishes, so a merged change shows up within minutes, with no
+rebuild here. Links: `?example=AOPQ012`, `&version=1.0.0`, and old `?example=<path>.rq` links
+still open the right example. The permanent IRIs
+`https://aopwiki.rdf.bigcat-bioinformatics.org/.well-known/sparql-examples/AOPQ012` redirect to
+the editor (a Traefik route on the cluster, see the cluster doc `services/aopwiki-snorql.md`).
 
 ## Changing things
 

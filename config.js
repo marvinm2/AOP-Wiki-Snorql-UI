@@ -2,6 +2,10 @@ window.SNORQL_CONFIG = {
     endpoint: "https://aopwiki.rdf.bigcat-bioinformatics.org/sparql",
     examplesRepo: "https://github.com/marvinm2/AOP-Wiki-Queries",
     examplesBranch: "main",
+    // Examples come from the index that AOP-Wiki-Queries publishes on its examples-index
+    // branch: .ttl examples with permanent identifiers (AOPQnnn) and versions.
+    examplesFormat: "index",
+    examplesIndexUrl: "",
     defaultGraph: "",
     title: "AOP-Wiki RDF Explorer",
     poweredByLink: "https://aopwiki.org",
