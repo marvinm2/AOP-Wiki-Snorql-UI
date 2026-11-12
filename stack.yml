@@ -123,14 +123,17 @@ services:
       - VIRT_Parameters_DirsAllowed=., ../vad, /usr/share/proj, /database/data
     volumes:
       - /mnt/gluster/docker/aopwiki-snorql/virtuoso-data:/database
+    # Room for the shutdown checkpoint. Swarm's default of 10s can kill Virtuoso while it
+    # writes virtuoso.db (the 2026-09-02 empty store followed a kill mid-write).
+    stop_grace_period: 2m
     deploy:
       replicas: 1
       update_config:
         order: stop-first
-      # Still on-failure: switching to any restarts the store, so it waits for a
-      # planned window (issue #19).
+      # any, not on-failure: a clean exit (code 0) would otherwise leave the endpoint down.
       restart_policy:
-        condition: on-failure
+        condition: any
+        delay: 5s
       labels:
         - traefik.enable=true
         # SPARQL endpoint at /sparql on the same host(s) as the UI. More specific
