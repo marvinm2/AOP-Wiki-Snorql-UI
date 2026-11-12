@@ -1,7 +1,7 @@
 # AOP-Wiki RDF Explorer: the Snorql UI engine (wikipathways/Snorql-UI) plus this
 # instance's config, theme and images. Engine updates are a tag bump here
 # (Dependabot opens a PR when a new engine version is published).
-FROM ghcr.io/wikipathways/snorql-ui:1.5.0
+FROM ghcr.io/wikipathways/snorql-ui:1.5.1
 
 COPY config.js /usr/local/apache2/htdocs/assets/js/config.js
 COPY theme.css /usr/local/apache2/htdocs/assets/css/theme.css
