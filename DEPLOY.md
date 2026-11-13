@@ -7,10 +7,10 @@ The image is published to GHCR by the [`Docker Build`](.github/workflows/docker.
 ## Prerequisites
 
 1. **DNS A record** in the Strato control panel:
-   - `aopwiki-rdf.vhp4safety.nl` → `81.169.246.233` (tgx1)
+   - `aopwiki-rdf.vhp4safety.nl` → the public IP of tgx1 (cluster docs: `architecture/dns-inventory.md`)
    - Verify propagation: `dig +short aopwiki-rdf.vhp4safety.nl`
 
-2. **SSH access to tgx1** as a user in the `docker` group (e.g. `mmartens`). The `tgx1` alias is pre-configured in `~/.ssh/config` for cluster developers.
+2. **SSH access to tgx1** as a user in the `docker` group. The `tgx1` alias is pre-configured in `~/.ssh/config` for cluster developers.
 
 3. **Traefik is running** on the Swarm with the `core` overlay network and the `letsencrypt` cert resolver — true on this cluster by default.
 
@@ -32,6 +32,9 @@ curl -fsSL \
 #   SNORQL_ENDPOINT, SNORQL_EXAMPLES_REPO, SNORQL_TITLE,
 #   WELCOME_TITLE, WELCOME_MESSAGE, DEFAULT_GRAPH
 # touch .env  # only if you need overrides
+
+# Required: Virtuoso's dba password (no default; keep it out of the repo and the docs)
+export DBA_PASSWORD='...'
 
 docker stack deploy -c stack.yml aopwiki-snorql
 ```
@@ -98,7 +101,7 @@ Make the package public via the GitHub UI (Packages → `aop-wiki-snorql-ui` →
 The default `SNORQL_ENDPOINT` is the live AOP-Wiki endpoint. To point at a different endpoint (e.g. the multi-version one), set `SNORQL_ENDPOINT` in `.env` next to `stack.yml` and re-deploy.
 
 **TLS certificate not issued:**
-Wait 1–2 minutes after the service comes up — Let's Encrypt's HTTP-01 challenge can take a moment. Then check Traefik logs: `ssh tgx1 "docker service logs traefik_traefik 2>&1 | grep -i aopwiki-snorql"`. If you see ACME errors, verify DNS actually points to `81.169.246.233`.
+Wait 1–2 minutes after the service comes up — Let's Encrypt's HTTP-01 challenge can take a moment. Then check Traefik logs: `ssh tgx1 "docker service logs traefik_traefik 2>&1 | grep -i aopwiki-snorql"`. If you see ACME errors, verify DNS actually points to tgx1.
 
 **Welcome panel shows the WikiPathways default text:**
 The `WELCOME_MESSAGE` env var didn't get injected — check `docker service inspect aopwiki-snorql_snorql --format '{{.Spec.TaskTemplate.ContainerSpec.Env}}'` and confirm it's set.

@@ -118,7 +118,9 @@ services:
     networks:
       - core
     environment:
-      - DBA_PASSWORD=${DBA_PASSWORD:-dba}
+      # Required, no default: export it before `docker stack deploy`. Virtuoso only reads it when
+      # the database is first created; change an existing password with isql (SET PASSWORD).
+      - DBA_PASSWORD=${DBA_PASSWORD:?set DBA_PASSWORD}
       - SPARQL_UPDATE=false
       - VIRT_Parameters_DirsAllowed=., ../vad, /usr/share/proj, /database/data
     volumes:
